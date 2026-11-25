@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env*.local
+
+# Agent skills: vendored, reinstall from skills-lock.json
+.agents/
+.claude/skills/
+
+# Claude Code local settings
+.claude/settings.local.json
