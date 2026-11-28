@@ -47,12 +47,16 @@ The row across the top of the **Screen** listing the open **Buffers**.
 _Avoid_: Tabs, bufferline
 
 **Explorer**:
-The sidebar showing the portfolio content as a file tree.
+The sidebar showing the portfolio content as a file tree. On phones it slides in as a drawer from the **Tap Bar**.
 _Avoid_: Sidebar, file tree, navigator
 
 **Statusline**:
 The bar along the bottom of the **Screen** showing the mode, the active **Buffer**, the cursor position and a help hint.
 _Avoid_: Status bar, footer
+
+**Tap Bar**:
+The row of five buttons along the bottom of the **Screen** on phones (Files, Find, Keys, `:`, Home), standing in for the keys.
+_Avoid_: Tab bar, nav bar, bottom nav
 
 **Which-key**:
 The help popup that lists what each key does after pressing Space.
