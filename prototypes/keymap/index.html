@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>~/franco Keymap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: a workbench. Keymap checklist on the left, a live Screen on the right that only obeys the ticked keys, a key log under it. Dark only, like the CRT it previews. */
+:root {
+  --bg: #111219;
+  --panel: #191b25;
+  --panel-2: #1f2230;
+  --line: #2b2e3e;
+  --fg: #dde1f0;
+  --muted: #8d92ab;
+  --accent: #f5a97f;
+  --accent-ink: #1d1a1a;
+  --ok: #a6da95;
+  --off: #ed8796;
+  --lock: #8aadf4;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1360px; margin: 0 auto; display: grid; gap: 22px; }
+header { display: grid; gap: 8px; }
+h1 { font: 600 1.6rem/1.2 var(--mono); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 .tilde { color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 78ch; }
+.lede b { color: var(--fg); font-weight: 500; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: var(--muted); align-items: center; }
+.eyebrow { font: 500 0.72rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0; }
+
+.grid { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1100px) { .grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr); } .right { position: sticky; top: 16px; } }
+
+/* keymap list */
+.left { display: grid; gap: 14px; min-width: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: 600 0.82rem/1 var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.count { margin-left: auto; font: 0.8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.group { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+.group h2 { margin: 0; padding: 10px 14px 8px; font: 600 0.78rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--line); }
+.kb { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 2px 12px; padding: 9px 14px; cursor: pointer; border-top: 1px solid var(--line); transition: background .25s; }
+.group h2 + .kb { border-top: 0; }
+.kb:hover { background: var(--panel-2); }
+.kb.locked { cursor: default; }
+.kb.flash { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+.kb input { position: absolute; opacity: 0; pointer-events: none; }
+.kb .box { grid-row: span 2; width: 18px; height: 18px; margin-top: 3px; border-radius: 4px; border: 1.5px solid var(--muted); display: grid; place-items: center; }
+.kb .box::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--accent-ink); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); opacity: 0; }
+.kb input:checked + .box { background: var(--accent); border-color: var(--accent); }
+.kb input:checked + .box::after { opacity: 1; }
+.kb.locked input + .box { background: var(--lock); border-color: var(--lock); opacity: .7; }
+.kb:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.kb .top { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; min-width: 0; }
+.kb .desc { color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
+.kb:has(input:checked) .desc { color: var(--fg); }
+kbd { font: 500 0.78rem/1 var(--mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; white-space: nowrap; }
+.badge { font: 500 0.68rem/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 6px; border-radius: 99px; margin-left: auto; white-space: nowrap; }
+.badge.mockup { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.badge.lazyvim, .badge.vim { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.badge.proposal { color: #c6a0f6; background: color-mix(in srgb, #c6a0f6 15%, transparent); }
+.badge.locked { color: var(--lock); background: color-mix(in srgb, var(--lock) 15%, transparent); }
+
+/* right column */
+.right { display: grid; gap: 12px; min-width: 0; }
+.scr-scroll { overflow-x: auto; padding: 2px 2px 8px; }
+.browser { min-width: 700px; border-radius: 12px; background: #0b0c11; border: 1px solid var(--line); overflow: hidden; }
+.addr { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font: 0.82rem var(--sans); color: var(--muted); border-bottom: 1px solid var(--line); }
+.addr button { font: 600 0.95rem/1 var(--sans); width: 28px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+.addr button:disabled { opacity: .35; cursor: default; }
+.addr button:focus-visible { outline: 2px solid var(--accent); }
+.addr .url { flex: 1; min-width: 0; font-family: var(--mono); background: var(--panel); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addr .url .dim { color: var(--muted); }
+.addr .left-msg { color: var(--off); font-size: 0.78rem; }
+
+.scr {
+  --c-bg: #24273a; --c-mantle: #1e2030; --c-crust: #181926; --c-s0: #363a4f; --c-s1: #494d64;
+  --c-ov0: #6e738d; --c-ov2: #939ab7; --c-sub: #a5adcb; --c-text: #cad3f5;
+  --c-blue: #8aadf4; --c-green: #a6da95; --c-yellow: #eed49f; --c-peach: #f5a97f; --c-red: #ed8796;
+  --c-mauve: #c6a0f6; --c-teal: #8bd5ca; --c-lav: #b7bdf8; --c-pink: #f5bde6;
+  position: relative; height: 540px; overflow: hidden;
+  background: var(--c-bg); color: var(--c-text); font: 13.5px/1.5 var(--mono);
+  outline: none; cursor: default;
+}
+.scr:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.focus-hint { position: absolute; z-index: 40; left: 50%; bottom: 30px; transform: translateX(-50%); font: 500 12px/1 var(--sans); color: #fff; background: rgba(0,0,0,.7); padding: 7px 12px; border-radius: 99px; pointer-events: none; transition: opacity .2s; white-space: nowrap; }
+.scr:focus .focus-hint, .scr:focus-within .focus-hint { opacity: 0; }
+#ui { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+.tabs { display: flex; background: var(--c-crust); flex: none; white-space: pre; }
+.tabs .off { width: 26ch; flex: none; color: var(--c-blue); background: var(--c-mantle); padding: 0 1ch; font-weight: 700; }
+.tab { padding: 0 1.2ch; color: var(--c-ov2); cursor: pointer; }
+.tab.on { background: var(--c-bg); color: var(--c-text); box-shadow: inset 0 -2px 0 var(--c-blue); }
+.tab .x { color: var(--c-ov0); margin-left: 1ch; }
+.tab .x:hover { color: var(--c-red); }
+.body { flex: 1; display: flex; min-height: 0; }
+.exp { width: 26ch; flex: none; background: var(--c-mantle); overflow: hidden; padding-top: 2px; }
+.exp .t { color: var(--c-blue); font-weight: 700; padding: 0 1ch; }
+.exp .it { padding: 0 1ch; white-space: pre; cursor: pointer; }
+.exp .it:hover { background: var(--c-s0); }
+.exp .it.cur { color: var(--c-lav); }
+.exp.focus .it.sel { background: var(--c-s1); }
+.exp.focus { box-shadow: inset -2px 0 0 var(--c-blue); }
+.exp .guide { color: var(--c-s1); }
+.exp .dir { color: var(--c-blue); }
+.exp .mark { color: var(--c-green); }
+.ed { flex: 1; position: relative; min-width: 0; }
+.ed-scroll { position: absolute; inset: 0; overflow: hidden; }
+.ln { display: flex; white-space: pre; cursor: text; }
+.ln .nr { width: 5ch; flex: none; text-align: right; padding-right: 1ch; color: var(--c-s1); }
+.ln.cur { background: color-mix(in srgb, var(--c-s0) 55%, transparent); }
+.ln.cur .nr { color: var(--c-lav); font-weight: 700; }
+.ln .code { position: relative; padding-left: 1ch; }
+.blk { position: absolute; top: 0; width: 1ch; height: 1.5em; background: var(--c-text); opacity: .55; pointer-events: none; }
+.ed.blur .blk { background: none; outline: 1px solid var(--c-text); opacity: .6; }
+.hit { background: color-mix(in srgb, var(--c-yellow) 35%, transparent); }
+.ed .tilde { color: var(--c-s1); padding-left: 1ch; }
+.sl { display: flex; flex: none; background: var(--c-mantle); white-space: pre; }
+.sl .m { background: var(--c-blue); color: var(--c-crust); font-weight: 700; padding: 0 1ch; }
+.sl .m.cmd { background: var(--c-peach); }
+.sl .m.ins { background: var(--c-green); }
+.sl .b { background: var(--c-s0); color: var(--c-text); padding: 0 1ch; }
+.sl .c { color: var(--c-sub); padding: 0 1ch; }
+.sl .sp { flex: 1; }
+.sl .hint { color: var(--c-ov2); padding: 0 1ch; font-style: italic; }
+.sl .pend { color: var(--c-peach); padding: 0 1ch; }
+
+.k-punc { color: var(--c-ov2); } .k-key { color: var(--c-blue); } .k-str { color: var(--c-green); } .k-num { color: var(--c-peach); }
+.k-com { color: var(--c-ov0); font-style: italic; } .k-h1 { color: var(--c-red); font-weight: 700; } .k-h2 { color: var(--c-peach); font-weight: 700; }
+.k-h3 { color: var(--c-yellow); font-weight: 700; } .k-bul { color: var(--c-teal); } .k-art { color: var(--c-lav); } .k-kw { color: var(--c-mauve); }
+.k-fld { color: var(--c-lav); } .k-ph { color: var(--c-pink); font-style: italic; } .k-dot { color: var(--c-teal); }
+
+.dash { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+.logo { color: var(--c-blue); white-space: pre; line-height: 1.15; font-size: 13px; }
+.menu { display: grid; gap: 2px; min-width: 44ch; }
+.mi { display: flex; white-space: pre; cursor: pointer; padding: 0 1ch; }
+.mi:hover { background: var(--c-s0); }
+.mi .ic { color: var(--c-blue); width: 3ch; }
+.mi .ds { flex: 1; }
+.mi .ky { color: var(--c-peach); }
+.foot { color: var(--c-ov2); white-space: pre; }
+.foot .bolt { color: var(--c-yellow); }
+.foot .hl { color: var(--c-peach); }
+
+.float { position: absolute; z-index: 20; background: var(--c-bg); border: 1px solid var(--c-blue); border-radius: 7px; }
+.float > .ttl { position: absolute; top: -0.78em; left: 2ch; background: var(--c-bg); color: var(--c-blue); padding: 0 .6ch; line-height: 1.4; font-weight: 700; }
+.wk { right: 2ch; bottom: 2.4em; padding: .7em 2ch .5em; display: grid; grid-template-columns: repeat(2, auto); gap: 0 4ch; }
+.wk .e { white-space: pre; cursor: pointer; }
+.wk .e:hover { background: var(--c-s0); }
+.wk .kk { color: var(--c-peach); } .wk .ar { color: var(--c-ov0); } .wk .grp { color: var(--c-blue); }
+.wk .ft { grid-column: 1 / -1; color: var(--c-ov0); margin-top: .4em; }
+.pk { left: 6%; right: 6%; top: 9%; bottom: 11%; display: flex; border: 0; background: transparent; gap: 1ch; }
+.pk .col { position: relative; border: 1px solid var(--c-blue); border-radius: 7px; background: var(--c-bg); display: flex; flex-direction: column; min-width: 0; }
+.pk .col > .ttl { position: absolute; top: -0.78em; left: 2ch; background: var(--c-bg); color: var(--c-blue); padding: 0 .6ch; line-height: 1.4; font-weight: 700; }
+.pk .left { width: 42%; flex: none; }
+.pk .right { flex: 1; overflow: hidden; padding-top: .5em; }
+.pk .inp { display: flex; padding: .5em 1ch .3em; border-bottom: 1px solid var(--c-s0); }
+.pk .inp span { color: var(--c-peach); }
+.pk input, .cl input { flex: 1; background: transparent; border: 0; outline: none; color: var(--c-text); font: inherit; padding: 0 0 0 1ch; caret-color: var(--c-text); }
+.pk .list { overflow: hidden; padding-top: .2em; }
+.pk .li { white-space: pre; padding: 0 1ch; cursor: pointer; }
+.pk .li.sel { background: var(--c-s0); }
+.pk .cnt { margin-top: auto; color: var(--c-ov0); padding: 0 1ch .2em; text-align: right; }
+.cl { left: 50%; top: 24%; transform: translateX(-50%); width: 60ch; display: flex; padding: .55em 1ch .35em; }
+.cl.search { border-color: var(--c-yellow); }
+.cl.search > .ttl { color: var(--c-yellow); }
+.cl .pr { color: var(--c-peach); }
+.notes { position: absolute; z-index: 25; top: 10px; right: 14px; display: grid; gap: 8px; width: 40ch; }
+.note { cursor: pointer; border: 1px solid var(--c-blue); border-radius: 7px; background: var(--c-bg); padding: .45em 1.2ch .4em; }
+.note .nt { color: var(--c-blue); font-weight: 700; }
+.note.warn { border-color: var(--c-yellow); } .note.warn .nt { color: var(--c-yellow); }
+.note.error { border-color: var(--c-red); } .note.error .nt { color: var(--c-red); }
+.note .nb { white-space: normal; }
+.powered-off { flex: 1; display: grid; place-items: center; color: var(--c-ov2); background: var(--c-crust); cursor: pointer; }
+
+/* key log */
+.logcard { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px 14px; display: grid; gap: 8px; }
+.loghead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.86rem; min-height: 9.5em; }
+.log li { display: grid; grid-template-columns: 9ch 14px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.log li .k { font: 500 0.8rem var(--mono); text-align: right; color: var(--fg); }
+.log li .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); align-self: center; }
+.log li.ok .dot { background: var(--ok); }
+.log li.off .dot { background: var(--off); }
+.log li.locked .dot { background: var(--lock); }
+.log li.none { color: var(--muted); }
+.log li button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.log .empty { color: var(--muted); display: block; }
+
+.pickcard { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px 14px; display: grid; gap: 10px; }
+pre.pick { margin: 0; font: 0.8rem/1.6 var(--mono); white-space: pre-wrap; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; max-height: 13em; overflow: auto; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.small { color: var(--muted); font-size: 0.8rem; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { .kb { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="tilde">~/</span>franco keymap</h1>
+    <p class="lede">For <b>issue #7</b>. Keys you've already decided are locked in blue. Tick or untick the rest. The Screen on the right only responds to ticked keys, so click it and try them. The log under it shows what each key did, or which row turns it on.</p>
+    <div class="legend">
+      <span class="badge mockup">mockup</span> in the first mockup, on by default
+      <span class="badge lazyvim">LazyVim</span><span class="badge vim">vim</span> real Neovim keys the mockup skipped
+      <span class="badge proposal">proposal</span> from the #7 proposal or my last round
+      <span class="badge locked">decided</span> settled in another issue, always on
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="left" aria-label="Keybindings">
+      <div class="presets">
+        <button type="button" class="btn" id="pMockup">Mockup set</button>
+        <button type="button" class="btn" id="pRec">Mockup + my 3 picks</button>
+        <button type="button" class="btn" id="pAll">Everything</button>
+        <span class="count" id="count"></span>
+      </div>
+      <div id="groups"></div>
+    </section>
+
+    <section class="right" aria-label="Try it">
+      <div class="scr-scroll">
+        <div class="browser">
+          <div class="addr">
+            <button type="button" id="back" aria-label="Back">‹</button>
+            <button type="button" id="fwd" aria-label="Forward">›</button>
+            <div class="url" id="url"></div>
+            <span class="left-msg" id="leftmsg"></span>
+          </div>
+          <div class="scr" id="scr" tabindex="0" aria-label="Portfolio Screen. Click to use the keyboard.">
+            <div id="ui"></div>
+            <div class="focus-hint">Click the Screen, then use the keyboard</div>
+          </div>
+        </div>
+      </div>
+      <div class="logcard">
+        <div class="loghead"><p class="eyebrow">Key log</p><button type="button" class="btn" id="reset">Restart Screen</button></div>
+        <ul class="log" id="log"><li class="empty">Click the Screen and press a key.</li></ul>
+      </div>
+      <div class="pickcard">
+        <p class="eyebrow">Your picks</p>
+        <pre class="pick" id="pick"></pre>
+        <div class="row"><button type="button" class="btn primary" id="copy">Copy picks</button><p class="small" id="copied">Paste them back in the chat.</p></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+const T0 = performance.now();
+
+/* ---------- the keymap ---------- */
+const GROUPS = ['Dashboard', 'Moving in a Buffer', 'Switching Buffers', 'Explorer', 'Popups', 'Search', 'Command Line', 'Read-only', 'Address bar', 'Statusline'];
+const B = [
+  { id: 'dash', g: 'Dashboard', k: ['w', 'p', 'e', 'c', 'd', 's'], d: 'Listed entries: Whoami, Projects, Experience, Contact, CV, language. Clicking works too.', src: 'locked', lock: '#6' },
+  { id: 'dashHidden', g: 'Dashboard', k: ['f', 't', 'l', 'x', 'q'], d: 'Hidden entries that still work: Find File, Timeline, Lazy, Lazy Extras, Quit.', src: 'locked', lock: '#6' },
+
+  { id: 'jk', g: 'Moving in a Buffer', k: ['j', 'k', '↓', '↑'], d: 'Down or up one line.', src: 'mockup' },
+  { id: 'gg', g: 'Moving in a Buffer', k: ['gg', 'G'], d: 'Top or bottom of the file.', src: 'mockup' },
+  { id: 'click', g: 'Moving in a Buffer', k: ['click'], d: 'Click a line to put the cursor there.', src: 'mockup' },
+  { id: 'wheel', g: 'Moving in a Buffer', k: ['wheel', 'trackpad'], d: 'Scroll the Buffer. The mockup had no scrolling.', src: 'proposal' },
+  { id: 'hl', g: 'Moving in a Buffer', k: ['h', 'l', '←', '→'], d: 'Left or right one character. The mockup only moved by line.', src: 'proposal' },
+  { id: 'wbe', g: 'Moving in a Buffer', k: ['w', 'b', 'e'], d: 'Next word, back a word, end of word.', src: 'vim' },
+  { id: 'line', g: 'Moving in a Buffer', k: ['0', '$'], d: 'Start or end of the line.', src: 'vim' },
+  { id: 'half', g: 'Moving in a Buffer', k: ['Ctrl-d', 'Ctrl-u'], d: 'Half a page down or up.', src: 'vim' },
+  { id: 'para', g: 'Moving in a Buffer', k: ['{', '}'], d: 'Back or forward to the next blank line.', src: 'vim' },
+  { id: 'count', g: 'Moving in a Buffer', k: ['5j', '3w', '10G'], d: 'A number repeats the next move.', src: 'vim' },
+
+  { id: 'HL', g: 'Switching Buffers', k: ['H', 'L'], d: 'Previous or next Buffer.', src: 'mockup' },
+  { id: 'tabs', g: 'Switching Buffers', k: ['click tab', '✕'], d: 'Switch to a Buffer or close it. Closing the last one goes back to the Dashboard.', src: 'mockup' },
+  { id: 'bd', g: 'Switching Buffers', k: ['␣ b d'], d: 'Close the current Buffer from the keyboard.', src: 'lazyvim' },
+
+  { id: 'expOpen', g: 'Explorer', k: ['starts open'], d: 'The Explorer is already open when you leave the Dashboard.', src: 'mockup' },
+  { id: 'expClick', g: 'Explorer', k: ['click'], d: 'Open files, open or close folders.', src: 'mockup' },
+  { id: 'spe', g: 'Explorer', k: ['␣ e'], d: 'Show or hide the Explorer.', src: 'mockup' },
+  { id: 'expKeys', g: 'Explorer', k: ['Ctrl-h', 'Ctrl-l', 'then j k Enter l h'], d: 'Jump into the Explorer and browse it with the keyboard. Ctrl-l jumps back to the Buffer.', src: 'lazyvim' },
+
+  { id: 'wk', g: 'Popups', k: ['␣'], d: 'Show the Which-key popup. Space combos work either way; this is just the popup.', src: 'mockup' },
+  { id: 'wkSec', g: 'Popups', k: ['␣ p', '␣ x', '␣ w', '␣ t', '␣ l', '␣ d', '␣ q'], d: 'Which-key shortcuts to Projects, Experience, Whoami, Timeline, skills, CV and Quit.', src: 'mockup' },
+  { id: 'pick', g: 'Popups', k: ['␣ ␣'], d: 'Open the Picker. Inside it: type, ↑ ↓ or Ctrl-n Ctrl-p, Enter, Esc.', src: 'mockup' },
+  { id: 'ff', g: 'Popups', k: ['␣ f f'], d: "Open the Picker with LazyVim's own key.", src: 'lazyvim' },
+  { id: 'fEd', g: 'Popups', k: ['f'], d: 'Open the Picker from inside a Buffer. In vim, f jumps to a letter instead.', src: 'proposal' },
+  { id: 'esc', g: 'Popups', k: ['Esc'], d: 'Go back to the Dashboard. If a popup is open, Esc only closes it. Open Buffers stay open. Notifications fade on their own.', src: 'mockup' },
+
+  { id: 'slash', g: 'Search', k: ['/'], d: 'Search the open file.', src: 'mockup' },
+  { id: 'nN', g: 'Search', k: ['n', 'N'], d: 'Next or previous match after a search.', src: 'proposal' },
+  { id: 'ctrlf', g: 'Search', k: ['Ctrl-F', '⌘F'], d: "Open / search instead of the browser's Find bar, which can't see canvas text.", src: 'proposal' },
+
+  { id: 'colon', g: 'Command Line', k: [':'], d: 'Open the Command Line.', src: 'mockup' },
+  { id: 'cq', g: 'Command Line', k: [':q', ':qa', ':wq', ':x'], d: 'Power off. How it looks is #8.', src: 'mockup' },
+  { id: 'cnum', g: 'Command Line', k: [':12'], d: 'Jump to line 12.', src: 'mockup' },
+  { id: 'ce', g: 'Command Line', k: [':e timeline.md'], d: 'Open a file by name.', src: 'mockup' },
+  { id: 'chelp', g: 'Command Line', k: [':help', ':plain'], d: 'Show help. Open the Plain View.', src: 'mockup' },
+  { id: 'cw', g: 'Command Line', k: [':w'], d: "Shows E45: 'readonly' option is set.", src: 'mockup' },
+  { id: 'cset', g: 'Command Line', k: [':lang', ':colorscheme', ':set nocrt'], d: 'Language, color scheme report, Screen Effect on or off.', src: 'locked', lock: '#3 #4 #5' },
+
+  { id: 'ro', g: 'Read-only', k: ['i', 'a', 'o', 'I', 'A', 'O', 'x'], d: "Trying to type shows E21: Cannot make changes, 'modifiable' is off.", src: 'mockup' },
+  { id: 'yy', g: 'Read-only', k: ['yy'], d: 'Copy the current line.', src: 'locked', lock: 'ADR 0001' },
+
+  { id: 'url', g: 'Address bar', k: ['address', '‹ ›'], d: 'Each Buffer gets its own address, so links can be shared and Back/Forward move between Buffers. Exact addresses are #11.', src: 'proposal' },
+
+  { id: 'hint', g: 'Statusline', k: ['press <space> for help'], d: 'Hint in the Statusline.', src: 'mockup' },
+  { id: 'slang', g: 'Statusline', k: ['EN', 'ES'], d: 'Click to switch language.', src: 'locked', lock: '#5' },
+];
+const DECIDED7 = ['jk', 'hl', 'click', 'wheel', 'HL', 'tabs', 'expOpen', 'expClick', 'spe', 'wk', 'wkSec', 'pick', 'esc', 'slash', 'colon', 'cq', 'ce', 'chelp', 'cw', 'ro', 'hint'];
+B.forEach(b => { if (DECIDED7.includes(b.id)) { b.src = 'locked'; b.lock = '#7'; } });
+const BY = Object.fromEntries(B.map(b => [b.id, b]));
+const DEFAULT = () => Object.fromEntries(B.map(b => [b.id, b.src === 'mockup' || b.src === 'locked']));
+let ON = DEFAULT();
+try { const s = JSON.parse(localStorage.getItem('franco-keymap-7') || 'null'); if (s) for (const id in s) if (BY[id] && BY[id].src !== 'locked') ON[id] = !!s[id]; } catch (e) {}
+const on = id => !!ON[id];
+const save = () => { try { localStorage.setItem('franco-keymap-7', JSON.stringify(ON)); } catch (e) {} };
+
+/* ---------- content ---------- */
+const BT = '```';
+const FILES = {
+'README.md': `---
+name: Franco
+role: <role>
+location: <city, country>
+available: true
+cv: cv.pdf
+---
+
+# Franco
+
+${BT}
+        ▄▄▓▓▓▓▓▓▓▓▄▄
+      ▄▓▓▀▀░░░░░░▀▀▓▓▄
+     ▓▓▀░░▄▄░░░░▄▄░░▀▓▓
+     ▓▓░░░▀▀░░░░▀▀░░░▓▓
+     ▓▓░░░░░░▄▄░░░░░░▓▓
+      ▓▓▄░░▀▀▀▀▀▀░░▄▓▓
+       ▀▓▓▄▄░░░░▄▄▓▓▀
+          ▀▀▓▓▓▓▀▀
+${BT}
+
+<One or two lines: who you are and what you like to build.>
+
+## Contact
+- email     <you@example.com>
+- github    <github.com/you>
+- linkedin  <linkedin.com/in/you>
+
+## Status
+- open to work: yes
+
+## Skills
+- TypeScript, React, Node
+- Astro, WebGL, a bit of Lua
+
+## Now
+- Building this portfolio
+- Reading about CRT shaders
+- Tweaking my Neovim config, again`,
+'experience/acme.md': `---
+company: Acme
+title: <title>
+start: 2024-03
+end: present
+current: true
+stack: [typescript, react, node]
+---
+
+# <title> @ Acme
+
+<What the team does, in one line.>
+
+## What I did
+- <Shipped X, which made Y possible>
+- <Owned Z end to end>
+- <A number that shows the impact>
+
+## Stack
+- TypeScript everywhere
+- React on the front, Node on the back`,
+'experience/initech.md': `---
+company: Initech
+title: <title>
+start: 2022-01
+end: 2024-02
+current: false
+stack: [javascript, vue, postgres]
+---
+
+# <title> @ Initech
+
+<What the team does, in one line.>
+
+## What I did
+- <Thing you are proud of>
+- <Thing you learned>`,
+'projects/portfolio.md': `---
+name: portfolio
+year: 2026
+stack: [astro, react, webgl]
+status: in progress
+---
+
+# portfolio
+
+This site: a CRT Screen running a LazyVim-style editor.
+Content lives in Markdown with typed frontmatter.
+
+## Highlights
+- Boot Sequence and CRT power-off
+- vim keys, plus mouse and touch
+- Plain View for recruiters and crawlers
+- llms.txt and a .md URL for every file
+
+## How it works
+- The editor is painted onto a canvas as a character grid
+- Bloom and CRT shaders run over the whole Screen
+- A hidden HTML copy feeds the Plain View`,
+'projects/example.md': `---
+name: <project>
+year: <yyyy>
+stack: [<tech>, <tech>]
+repo: <github.com/you/project>
+---
+
+# <project>
+
+<What it does and why you built it.>
+
+${BT}
+  [ client ] ───► [ api ] ───► [ db ]
+                     │
+                     └──► [ queue ]
+${BT}
+
+## What was hard
+- <A problem and how you solved it>`,
+'timeline.md': `# timeline
+
+Milestones, newest first.
+
+2026-11   ● Started this portfolio
+<yyyy-mm> ● <Certification>
+<yyyy-mm> ● <Talk or meetup>
+<yyyy>    ● <Degree>, <school>`,
+'extras.md': `# extras
+
+Side quests and ongoing tinkering.
+
+- <Hobby>: <one line about it>
+- <Something you build for fun>
+- Neovim config, forever unfinished`,
+'skills.lua': `-- skills, written as a LazyVim plugin spec
+return {
+  { "typescript", version = "5.x", lazy = false },
+  { "react", version = "19", dependencies = { "typescript" } },
+  { "astro", version = "5", event = "VeryLazy" },
+  { "node", version = "22" },
+  { "git", opts = { daily = true } },
+  -- <add your real skills here>
+}`,
+};
+const ALL = ['README.md', 'experience/acme.md', 'experience/initech.md', 'projects/example.md', 'projects/portfolio.md', 'timeline.md', 'extras.md', 'skills.lua', 'cv.pdf'];
+const TREE = [
+  { dir: 'experience', kids: ['acme.md', 'initech.md'] },
+  { dir: 'projects', kids: ['example.md', 'portfolio.md'] },
+  'README.md', 'cv.pdf', 'extras.md', 'skills.lua', 'timeline.md',
+];
+const ICON = p => p.endsWith('.lua') ? '☾' : p.endsWith('.pdf') ? '▤' : '≡';
+const PATH = p => p === 'README.md' ? '/whoami' : '/' + p.replace(/\.md$|\.lua$/, '');
+
+/* ---------- state ---------- */
+let S;
+function fresh() {
+  S = {
+    view: 'dashboard', powered: true, expOpen: on('expOpen'), collapsed: new Set(), focus: 'editor', expSel: 0,
+    buffers: [], active: null, cur: {}, want: {}, top: {}, rows: 18,
+    overlay: null, pq: '', psel: 0, cmdPrefix: ':', leader: null, pend: '', count: '',
+    notes: [], nid: 0, search: '', hist: ['/'], hi: 0, leftSite: false,
+  };
+}
+fresh();
+
+const $ = s => document.querySelector(s);
+const scr = $('#scr'), ui = $('#ui');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sp = (k, s) => `<span class="k-${k}">${esc(s)}</span>`;
+const ph = h => h.replace(/&lt;[^&]*?&gt;/g, m => `<span class="k-ph">${m}</span>`);
+const txt = p => FILES[p] || '';
+const lines = p => txt(p).split('\n');
+
+/* ---------- highlighting ---------- */
+function hlMd(text) {
+  let fm = false, fence = false;
+  return text.split('\n').map((l, i) => {
+    if (i === 0 && l === '---') { fm = true; return sp('punc', l); }
+    if (fm) {
+      if (l === '---') { fm = false; return sp('punc', l); }
+      const m = l.match(/^([\w-]+)(:)\s?(.*)$/);
+      if (!m) return ph(esc(l));
+      const v = m[3]; let vh;
+      if (/^\[.*\]$/.test(v)) vh = sp('punc', '[') + v.slice(1, -1).split(',').map(x => ph(sp('str', x))).join(sp('punc', ',')) + sp('punc', ']');
+      else if (/^(true|false|present|[\d-]+|[\d.]+x?)$/.test(v)) vh = sp('num', v);
+      else vh = ph(sp('str', v));
+      return sp('key', m[1]) + sp('punc', ':') + ' ' + vh;
+    }
+    if (l.startsWith('```')) { fence = !fence; return sp('punc', l); }
+    if (fence) return sp('art', l);
+    const h = l.match(/^(#{1,3}) /); if (h) return ph(sp('h' + h[1].length, l));
+    let o = esc(l);
+    o = o.replace(/^(\s*)(-|\d+\.) /, (_, a, b) => `${a}<span class="k-bul">${b}</span> `);
+    o = o.replace(/^(\d{4}-\d{2})/, '<span class="k-num">$1</span>');
+    o = o.replace(/●/g, '<span class="k-dot">●</span>');
+    return ph(o);
+  });
+}
+function hlLua(text) {
+  const KW = new Set(['return', 'local', 'true', 'false', 'nil', 'function', 'end']);
+  return text.split('\n').map(l => {
+    const ci = l.indexOf('--');
+    const code = ci >= 0 ? l.slice(0, ci) : l, com = ci >= 0 ? l.slice(ci) : '';
+    let o = '', m; const re = /("[^"]*")|([A-Za-z_]\w*)|([{}(),=])|(\s+)|(.)/g;
+    while ((m = re.exec(code))) {
+      if (m[1]) o += sp('str', m[1]);
+      else if (m[2]) { const rest = code.slice(re.lastIndex); o += KW.has(m[2]) ? sp(m[2] === 'true' || m[2] === 'false' ? 'num' : 'kw', m[2]) : /^\s*=(?!=)/.test(rest) ? sp('fld', m[2]) : esc(m[2]); }
+      else if (m[3]) o += sp('punc', m[3]);
+      else o += esc(m[0]);
+    }
+    return o + (com ? ph(sp('com', com)) : '');
+  });
+}
+const hl = p => p.endsWith('.lua') ? hlLua(txt(p)) : hlMd(txt(p));
+
+/* ---------- key log ---------- */
+const LOG = [];
+function log(key, status, text, id) {
+  LOG.unshift({ key, status, text, id });
+  if (LOG.length > 7) LOG.pop();
+  $('#log').innerHTML = LOG.map(e => `<li class="${e.status}"><span class="k">${esc(e.key)}</span><span class="dot"></span><span>${esc(e.text)}${e.status === 'off' ? ` <button type="button" data-row="${e.id}">turn on</button>` : ''}</span></li>`).join('');
+}
+const ok = (key, text) => log(key, 'ok', text);
+const off = (key, id) => { log(key, 'off', `off: "${BY[id].d.split('.')[0]}"`, id); };
+const none = (key, text) => log(key, 'none', text || 'nothing bound');
+$('#log').addEventListener('click', e => {
+  const b = e.target.closest('[data-row]'); if (!b) return;
+  const id = b.dataset.row; ON[id] = true; save(); syncRows(); render();
+  const row = document.getElementById('row-' + id);
+  row.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200);
+  b.closest('li').classList.replace('off', 'ok'); b.remove();
+  scr.focus({ preventScroll: true });
+});
+
+/* ---------- actions ---------- */
+function notify(title, msg, level = 'info') {
+  S.notes.push({ id: ++S.nid, title, msg, level });
+  if (S.notes.length > 3) S.notes.shift();
+  const id = S.nid;
+  setTimeout(() => { S.notes = S.notes.filter(n => n.id !== id); render(); }, 5000);
+  render();
+}
+function pos(p) { return S.cur[p] || (S.cur[p] = { l: 0, c: 0 }); }
+function openFile(p, line, fromHist) {
+  if (p === 'cv.pdf') { notify('Download', 'cv.pdf would download here.'); return; }
+  if (!FILES[p]) { notify('Error', `E447: Can't find file "${p}" in path`, 'error'); return; }
+  if (S.view === 'dashboard') S.expOpen = on('expOpen') || S.expOpen;
+  S.view = 'editor'; S.overlay = null; S.leader = null; S.focus = 'editor';
+  if (!S.buffers.includes(p)) S.buffers.push(p);
+  S.active = p;
+  if (line != null) S.cur[p] = { l: line, c: 0 };
+  pos(p);
+  if (!fromHist) pushHist(p);
+  render();
+}
+function goDashboard(fromHist) { S.view = 'dashboard'; S.overlay = null; S.leader = null; if (!fromHist) pushHist('/'); render(); }
+function pushHist(where) {
+  if (!on('url')) return;
+  if (S.hist[S.hi] === where) return;
+  S.hist = S.hist.slice(0, S.hi + 1); S.hist.push(where); S.hi = S.hist.length - 1;
+}
+function closeBuffer(p) {
+  S.buffers = S.buffers.filter(b => b !== p);
+  if (S.active === p) S.active = S.buffers[S.buffers.length - 1] || null;
+  if (!S.active) goDashboard(); else { pushHist(S.active); render(); }
+}
+function openPicker() { S.overlay = 'picker'; S.pq = ''; S.psel = 0; S.leader = null; render(); }
+function openCmd(prefix) { S.overlay = 'cmd'; S.cmdPrefix = prefix; S.leader = null; render(); }
+function powerOff() { S.powered = false; S.overlay = null; S.leader = null; render(); }
+function powerOn() { fresh(); render(); }
+const contactLine = () => lines('README.md').findIndex(l => l.startsWith('## Contact'));
+
+const DASH = [
+  { k: 'w', ic: '☺', d: 'Whoami', ess: true, a: () => openFile('README.md') },
+  { k: 'p', ic: '▤', d: 'Projects', ess: true, a: () => openFile('projects/portfolio.md') },
+  { k: 'e', ic: '◈', d: 'Experience', ess: true, a: () => openFile('experience/acme.md') },
+  { k: 'c', ic: '✉', d: 'Contact', ess: true, a: () => openFile('README.md', contactLine()) },
+  { k: 'd', ic: '↓', d: 'Download CV', ess: true, a: () => openFile('cv.pdf') },
+  { k: 's', ic: '⇄', d: 'Español', ess: true, a: () => notify('Language', 'Switches to /es (decided in #5).') },
+  { k: 'f', ic: '≡', d: 'Find File', a: openPicker },
+  { k: 't', ic: '◷', d: 'Timeline', a: () => openFile('timeline.md') },
+  { k: 'l', ic: '☾', d: 'Lazy (skills)', a: () => openFile('skills.lua') },
+  { k: 'x', ic: '✦', d: 'Lazy Extras', a: () => openFile('extras.md') },
+  { k: 'q', ic: '⏻', d: 'Quit', a: powerOff },
+];
+const WK_SEC = [
+  { k: 'p', d: 'Projects', a: () => openFile('projects/portfolio.md') },
+  { k: 'x', d: 'Experience', a: () => openFile('experience/acme.md') },
+  { k: 'w', d: 'Whoami', a: () => openFile('README.md') },
+  { k: 't', d: 'Timeline', a: () => openFile('timeline.md') },
+  { k: 'l', d: 'Lazy (skills)', a: () => openFile('skills.lua') },
+  { k: 'd', d: 'Download CV', a: () => openFile('cv.pdf') },
+  { k: 'q', d: 'Quit', a: powerOff },
+];
+function wkEntries() {
+  if (S.leader === 'f') return [{ k: 'f', d: 'Find file', a: openPicker, id: 'ff' }];
+  if (S.leader === 'b') return [{ k: 'd', d: 'Delete buffer', a: () => S.active ? closeBuffer(S.active) : notify('Buffer', 'No Buffer open.', 'warn'), id: 'bd' }];
+  const e = [];
+  e.push({ k: '␣', key: ' ', d: 'Find file', a: openPicker, id: 'pick' });
+  e.push({ k: 'e', d: 'Explorer', a: toggleExplorer, id: 'spe' });
+  e.push({ k: 'f', d: '+find', grp: true, a: () => { S.leader = 'f'; render(); }, id: 'ff' });
+  e.push({ k: 'b', d: '+buffer', grp: true, a: () => { S.leader = 'b'; render(); }, id: 'bd' });
+  WK_SEC.forEach(w => e.push({ ...w, id: 'wkSec' }));
+  return e;
+}
+function toggleExplorer() {
+  S.expOpen = !S.expOpen; S.overlay = null; S.leader = null;
+  if (!S.expOpen) S.focus = 'editor';
+  if (S.view === 'dashboard') openFile('README.md'); else render();
+}
+function runCmd(prefix, raw) {
+  S.overlay = null;
+  const v = raw.trim();
+  if (prefix === '/') {
+    if (!v) return render();
+    S.search = v; ok('/' + v, 'searched the file'); return findNext(1);
+  }
+  const [cmd, ...args] = v.split(/\s+/); const arg = args.join(' ');
+  if (!cmd) return render();
+  const deny = id => { off(':' + v, id); notify('Command', `E492: Not an editor command: ${v}`, 'error'); };
+  if (/^(q|q!|qa|qa!|quit|wq|x)$/.test(cmd)) { if (!on('cq')) return deny('cq'); ok(':' + v, 'powered off'); return powerOff(); }
+  if (/^\d+$/.test(cmd)) { if (!on('cnum')) return deny('cnum'); if (S.view !== 'editor') return render(); const n = lines(S.active).length; S.cur[S.active] = { l: Math.min(+cmd - 1, n - 1), c: 0 }; ok(':' + v, `jumped to line ${cmd}`); return render(); }
+  if (cmd === 'help' || cmd === 'h') { if (!on('chelp')) return deny('chelp'); ok(':' + v, 'showed help'); return notify('Help', 'Space opens Which-key. Space Space finds files. H and L switch Buffers. :plain opens the Plain View.'); }
+  if (cmd === 'plain') { if (!on('chelp')) return deny('chelp'); ok(':' + v, 'would open the Plain View'); return notify('Plain View', 'Opens the same content as plain HTML.'); }
+  if (cmd === 'e' || cmd === 'edit') { if (!on('ce')) return deny('ce'); const p = ALL.find(f => f === arg || f.endsWith('/' + arg)); ok(':' + v, 'opened a file by name'); return openFile(p || arg); }
+  if (cmd === 'w' || cmd === 'write') { if (!on('cw')) return deny('cw'); log(':' + v, 'ok', 'E45 readonly'); return notify('Write', "E45: 'readonly' option is set", 'error'); }
+  if (cmd === 'lang') { log(':' + v, 'locked', 'decided in #5'); return notify('Language', arg === 'es' ? 'Switches to /es.' : arg === 'en' ? 'Switches to /.' : `E474: Invalid argument: ${arg || '(none)'}`, /^(es|en)$/.test(arg) ? 'info' : 'error'); }
+  if (cmd === 'colorscheme' || cmd === 'colo') { log(':' + v, 'locked', 'decided in #4'); return arg ? notify('Colorscheme', `E185: Cannot find color scheme '${arg}'`, 'error') : notify('Colorscheme', 'catppuccin-macchiato'); }
+  if (cmd === 'set') { log(':' + v, 'locked', 'decided in #3'); return notify('Screen Effect', /nocrt/.test(arg) ? 'CRT effect off.' : /crt/.test(arg) ? 'CRT effect on.' : `E518: Unknown option: ${arg}`); }
+  none(':' + v, 'not a command'); notify('Command', `E492: Not an editor command: ${v}`, 'error');
+}
+function findNext(dir) {
+  if (S.view !== 'editor' || !S.search) return render();
+  const L = lines(S.active), q = S.search.toLowerCase(), p = pos(S.active), n = L.length;
+  for (let s = 1; s <= n; s++) {
+    const i = ((p.l + dir * s) % n + n) % n;
+    const c = L[i].toLowerCase().indexOf(q);
+    if (c >= 0) { S.cur[S.active] = { l: i, c }; return render(); }
+  }
+  notify('Search', `E486: Pattern not found: ${S.search}`, 'error');
+}
+
+/* ---------- motions ---------- */
+const cls = ch => ch === undefined || /\s/.test(ch) ? 0 : /\w/.test(ch) ? 1 : 2;
+const maxCol = s => Math.max(0, s.length - 1);
+function wFwd(L, { l, c }) {
+  let line = L[l], t = cls(line[c]), i = c;
+  if (t !== 0) while (i < line.length && cls(line[i]) === t) i++;
+  for (;;) {
+    while (i < line.length && cls(line[i]) === 0) i++;
+    if (i < line.length) return { l, c: i };
+    if (l >= L.length - 1) return { l, c: maxCol(line) };
+    l++; line = L[l]; i = 0; if (!line.length) return { l, c: 0 };
+  }
+}
+function wBack(L, { l, c }) {
+  let line = L[l], i = c - 1;
+  for (;;) {
+    while (i >= 0 && cls(line[i]) === 0) i--;
+    if (i >= 0) { const t = cls(line[i]); while (i > 0 && cls(line[i - 1]) === t) i--; return { l, c: i }; }
+    if (l === 0) return { l: 0, c: 0 };
+    l--; line = L[l]; i = line.length - 1; if (!line.length) return { l, c: 0 };
+  }
+}
+function wEnd(L, { l, c }) {
+  let line = L[l], i = c + 1;
+  for (;;) {
+    while (i < line.length && cls(line[i]) === 0) i++;
+    if (i < line.length) { const t = cls(line[i]); while (i < line.length - 1 && cls(line[i + 1]) === t) i++; return { l, c: i }; }
+    if (l >= L.length - 1) return { l, c: maxCol(line) };
+    l++; line = L[l]; i = 0;
+  }
+}
+
+/* ---------- rendering ---------- */
+function fuzzy(q, s) { let i = 0; q = q.toLowerCase(); for (const c of s.toLowerCase()) if (c === q[i]) i++; return i === q.length; }
+const picked = () => ALL.filter(p => fuzzy(S.pq, p));
+function expItems() {
+  const out = [];
+  for (const n of TREE) {
+    if (typeof n === 'string') { out.push({ p: n }); continue; }
+    out.push({ dir: n.dir });
+    if (!S.collapsed.has(n.dir)) n.kids.forEach((k, i) => out.push({ p: `${n.dir}/${k}`, kid: true, last: i === n.kids.length - 1 }));
+  }
+  return out;
+}
+function dashHTML() {
+  const L = {
+    F: ['███████╗', '██╔════╝', '█████╗  ', '██╔══╝  ', '██║     ', '╚═╝     '],
+    R: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██║  ██║', '╚═╝  ╚═╝'],
+    A: [' █████╗ ', '██╔══██╗', '███████║', '██╔══██║', '██║  ██║', '╚═╝  ╚═╝'],
+    N: ['███╗   ██╗', '████╗  ██║', '██╔██╗ ██║', '██║╚██╗██║', '██║ ╚████║', '╚═╝  ╚═══╝'],
+    C: [' ██████╗', '██╔════╝', '██║     ', '██║     ', '╚██████╗', ' ╚═════╝'],
+    O: [' ██████╗ ', '██╔═══██╗', '██║   ██║', '██║   ██║', '╚██████╔╝', ' ╚═════╝ '],
+  };
+  const logo = [0, 1, 2, 3, 4, 5].map(r => esc([...'FRANCO'].map(c => L[c][r]).join(''))).join('\n');
+  const items = DASH.filter(d => d.ess).map(d => `<div class="mi" data-dash="${d.k}"><span class="ic">${d.ic}</span><span class="ds">${esc(d.d)}</span><span class="ky">${d.k}</span></div>`).join('');
+  const ms = (window.__ms ||= (performance.now() - T0 + 12).toFixed(2));
+  return `<div class="dash"><div class="logo">${logo}</div><div class="menu">${items}</div>
+    <div class="foot"><span class="bolt">⚡</span> Franco loaded <span class="hl">14/14</span> skills in <span class="hl">${ms}ms</span></div></div>`;
+}
+function explorerHTML() {
+  const items = expItems(); S.expSel = Math.min(S.expSel, items.length - 1);
+  let h = `<div class="exp${S.focus === 'explorer' ? ' focus' : ''}"><div class="t">~/franco</div>`;
+  items.forEach((it, i) => {
+    const sel = i === S.expSel ? ' sel' : '';
+    if (it.dir) { const open = !S.collapsed.has(it.dir); h += `<div class="it${sel}" data-dir="${it.dir}"><span class="dir">${open ? '▾' : '▸'} ▪ ${it.dir}</span></div>`; return; }
+    const name = it.p.split('/').pop();
+    const g = it.kid ? `<span class="guide">${it.last ? '└ ' : '│ '}</span>` : '';
+    const mark = /current: true/.test(FILES[it.p] || '') ? ' <span class="mark">●</span>' : '';
+    h += `<div class="it${S.active === it.p ? ' cur' : ''}${sel}" data-open="${it.p}">  ${g}${ICON(it.p)} ${name}${mark}</div>`;
+  });
+  return h + '</div>';
+}
+function tabsHTML(showExp) {
+  let h = `<div class="tabs">${showExp ? `<div class="off">  File Explorer</div>` : ''}`;
+  for (const b of S.buffers) h += `<div class="tab${b === S.active ? ' on' : ''}" data-buf="${b}"> ${ICON(b)} ${esc(b.split('/').pop())}<span class="x" data-close="${b}">✕</span></div>`;
+  return h + '</div>';
+}
+function bufferHTML() {
+  const L = hl(S.active), raw = lines(S.active), p = pos(S.active);
+  p.l = Math.min(p.l, L.length - 1); p.c = Math.min(p.c, maxCol(raw[p.l]));
+  let h = `<div class="ed${S.focus === 'explorer' ? ' blur' : ''}"><div class="ed-scroll" id="edscroll">`;
+  L.forEach((l, i) => {
+    const nr = i === p.l ? i + 1 : Math.abs(i - p.l);
+    const blk = i === p.l ? `<span class="blk" style="left:calc(1ch + ${p.c}ch)"></span>` : '';
+    h += `<div class="ln${i === p.l ? ' cur' : ''}" data-line="${i}"><span class="nr">${nr}</span><span class="code">${l || ' '}${blk}</span></div>`;
+  });
+  for (let i = 0; i < 40; i++) h += `<div class="tilde">~</div>`;
+  return h + '</div></div>';
+}
+function statusHTML() {
+  const p = S.active, n = lines(p).length, c = pos(p);
+  const mode = S.overlay === 'cmd' ? '<span class="m cmd">COMMAND</span>' : S.overlay === 'picker' ? '<span class="m ins">INSERT</span>' : '<span class="m">NORMAL</span>';
+  const pct = c.l === 0 ? 'Top' : c.l === n - 1 ? 'Bot' : Math.round(c.l / (n - 1) * 100) + '%';
+  const pend = (S.leader ? '␣' + (S.leader === ' ' ? '' : ' ' + S.leader) : '') + S.count + S.pend;
+  return `<div class="sl">${mode}<span class="b">⎇ main</span><span class="c">${ICON(p)} ${esc(p)}</span><span class="sp"></span>${pend ? `<span class="pend">${esc(pend)}</span>` : ''}${on('hint') ? '<span class="hint">press &lt;space&gt; for help</span>' : ''}<span class="b" data-slang="1">EN</span><span class="c">${p.endsWith('.lua') ? 'lua' : 'markdown'}</span><span class="b">${pct}</span><span class="b">${String(c.l + 1).padStart(2)}:${c.c + 1}</span></div>`;
+}
+function overlaysHTML() {
+  let h = '';
+  if (S.overlay === 'wk') {
+    const ents = wkEntries().filter(w => on(w.id));
+    const title = S.leader === 'f' ? ' &lt;space&gt;f ' : S.leader === 'b' ? ' &lt;space&gt;b ' : ' &lt;space&gt; ';
+    h += `<div class="float wk"><span class="ttl">${title}</span>` + (ents.length ? ents.map(w =>
+      `<div class="e" data-wk="${esc(w.k)}"><span class="kk">${esc(w.k)}</span> <span class="ar">→</span> <span class="${w.grp ? 'grp' : ''}">${esc(w.d)}</span></div>`).join('') : '<div class="e">(nothing ticked)</div>') +
+      `<div class="ft">esc close</div></div>`;
+  }
+  if (S.overlay === 'picker') h += `<div class="float pk"><div class="col left"><span class="ttl"> Files </span><div class="inp"><span>❯</span><input id="pkin" autocomplete="off" spellcheck="false" aria-label="Find file"></div><div class="list" id="pklist"></div><div class="cnt" id="pkcnt"></div></div><div class="col right"><span class="ttl"> Preview </span><div id="pkprev"></div></div></div>`;
+  if (S.overlay === 'cmd') { const s = S.cmdPrefix === '/'; h += `<div class="float cl${s ? ' search' : ''}"><span class="ttl"> ${s ? 'Search' : 'Cmdline'} </span><span class="pr">${s ? '/' : ':'}</span><input id="clin" autocomplete="off" spellcheck="false" aria-label="${s ? 'Search' : 'Command'}"></div>`; }
+  if (S.notes.length) h += `<div class="notes">` + S.notes.map(n => `<div class="note ${n.level}" data-nx="${n.id}" title="Click to close"><div class="nt">${n.level === 'error' ? '✖' : n.level === 'warn' ? '▲' : 'ℹ'} ${esc(n.title)}</div><div class="nb">${esc(n.msg)}</div></div>`).join('') + `</div>`;
+  return h;
+}
+function renderPick() {
+  const list = picked(); S.psel = Math.min(S.psel, Math.max(0, list.length - 1));
+  $('#pklist').innerHTML = list.map((p, i) => `<div class="li${i === S.psel ? ' sel' : ''}" data-pick="${p}"> ${ICON(p)} ${esc(p)}</div>`).join('') || '<div class="li"> no matches</div>';
+  $('#pkcnt').textContent = `${list.length}/${ALL.length}`;
+  const p = list[S.psel];
+  $('#pkprev').innerHTML = !p ? '' : p === 'cv.pdf' ? '<div class="ln"><span class="code k-com">binary file. Opening it downloads the CV.</span></div>' : hl(p).slice(0, 22).map(l => `<div class="ln"><span class="code">${l || ' '}</span></div>`).join('');
+}
+function renderAddr() {
+  const where = S.view === 'editor' && S.active ? S.active : '/';
+  const path = on('url') ? (where === '/' ? '/' : PATH(where)) : '/';
+  $('#url').innerHTML = `<span class="dim">https://</span>franco.dev${esc(path)}`;
+  $('#back').disabled = false;
+  $('#fwd').disabled = !on('url') || S.hi >= S.hist.length - 1;
+  $('#leftmsg').textContent = S.leftSite ? 'Back left the portfolio' : '';
+}
+function render() {
+  renderAddr();
+  if (!S.powered) { ui.innerHTML = `<div class="powered-off" data-power="1">powered off · press any key to boot</div>`; return; }
+  let h = '';
+  if (S.view === 'dashboard') h += dashHTML();
+  else {
+    const showExp = S.expOpen;
+    h += tabsHTML(showExp);
+    h += `<div class="body">${showExp ? explorerHTML() : ''}${bufferHTML()}</div>`;
+    h += statusHTML();
+  }
+  h += overlaysHTML();
+  ui.innerHTML = h;
+  if (S.view === 'editor') {
+    const el = $('#edscroll'), first = el && el.querySelector('.ln');
+    if (el && first) {
+      const lh = first.offsetHeight, rows = Math.max(4, Math.floor(el.clientHeight / lh)), so = 3, n = lines(S.active).length, p = pos(S.active);
+      S.rows = rows;
+      let top = S.top[S.active] || 0;
+      if (p.l < top + so) top = Math.max(0, p.l - so);
+      else if (p.l > top + rows - 1 - so) top = p.l - rows + 1 + so;
+      top = Math.max(0, Math.min(top, Math.max(0, n - 1)));
+      S.top[S.active] = top; el.scrollTop = top * lh;
+    }
+  }
+  if (S.overlay === 'picker') { renderPick(); const i = $('#pkin'); i.value = S.pq; i.focus({ preventScroll: true }); }
+  if (S.overlay === 'cmd') $('#clin').focus({ preventScroll: true });
+}
+
+/* ---------- input ---------- */
+const label = e => (e.ctrlKey ? 'Ctrl-' : '') + (e.metaKey ? '⌘' : '') + (e.key === ' ' ? '␣' : e.key);
+function closeOverlay() { S.overlay = null; S.leader = null; render(); scr.focus({ preventScroll: true }); }
+
+scr.addEventListener('keydown', e => {
+  if (e.target.id === 'pkin') {
+    const list = picked();
+    if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
+    else if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'n')) { e.preventDefault(); S.psel = Math.min(S.psel + 1, list.length - 1); renderPick(); }
+    else if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'p')) { e.preventDefault(); S.psel = Math.max(S.psel - 1, 0); renderPick(); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (list[S.psel]) { S.overlay = null; openFile(list[S.psel]); scr.focus({ preventScroll: true }); } }
+    return;
+  }
+  if (e.target.id === 'clin') {
+    if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
+    else if (e.key === 'Enter') { e.preventDefault(); runCmd(S.cmdPrefix, e.target.value); scr.focus({ preventScroll: true }); }
+    else if (e.key === 'Backspace' && !e.target.value) { e.preventDefault(); closeOverlay(); }
+    return;
+  }
+  const k = e.key, kl = label(e);
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'f') {
+    if (on('ctrlf')) { e.preventDefault(); if (S.view === 'editor') { openCmd('/'); ok(kl, 'opened / search'); } else ok(kl, 'caught (no Buffer open to search)'); }
+    else off(kl, 'ctrlf');
+    return;
+  }
+  if (e.metaKey || e.altKey) return;
+  if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(k)) return;
+  if (e.ctrlKey && !['d', 'u', 'h', 'l'].includes(k)) return;
+  e.preventDefault();
+  if (!S.powered) { ok(kl, 'booted again'); return powerOn(); }
+  S.leftSite = false;
+
+  // which-key / leader
+  if (S.leader) {
+    if (k === 'Escape') { none(kl, 'closed Which-key'); return closeOverlay(); }
+    const w = wkEntries().find(x => (x.key || x.k) === k);
+    const lead = S.leader === ' ' ? '␣ ' : `␣ ${S.leader} `;
+    S.overlay = null; S.leader = null;
+    if (!w) { none(lead + kl); return render(); }
+    if (!on(w.id)) { off(lead + kl, w.id); return render(); }
+    ok(lead + kl, w.d);
+    w.a();
+    if (S.leader) S.overlay = on('wk') ? 'wk' : null;
+    render();
+    return;
+  }
+  if (k === 'Escape') {
+    if (S.count || S.pend) { S.count = ''; S.pend = ''; none(kl, 'cancelled the half-typed key'); return render(); }
+    if (S.view === 'editor') { log(kl, 'locked', 'back to the Dashboard (Buffers stay open)'); return goDashboard(); }
+    none(kl, 'already on the Dashboard'); return;
+  }
+  if (k === ' ') { S.leader = ' '; S.overlay = on('wk') ? 'wk' : null; if (on('wk')) ok(kl, 'Which-key opened'); else log(kl, 'off', 'Space is waiting for the next key, but the popup is off', 'wk'); return render(); }
+  if (k === ':') { if (!on('colon')) { off(kl, 'colon'); return; } return openCmd(':'); }
+
+  if (S.view === 'dashboard') {
+    const d = DASH.find(x => x.k === k);
+    if (d) { log(kl, 'locked', `${d.d} (decided in #6)`); d.a(); } else none(kl);
+    return;
+  }
+
+  // explorer focus
+  if (S.focus === 'explorer') {
+    const items = expItems(), it = items[S.expSel];
+    if (e.ctrlKey && k === 'l') { S.focus = 'editor'; ok(kl, 'back to the Buffer'); return render(); }
+    if (k === 'j' || k === 'ArrowDown') { S.expSel = Math.min(S.expSel + 1, items.length - 1); ok(kl, 'down in the Explorer'); return render(); }
+    if (k === 'k' || k === 'ArrowUp') { S.expSel = Math.max(S.expSel - 1, 0); ok(kl, 'up in the Explorer'); return render(); }
+    if (k === 'Enter' || k === 'l') {
+      if (it.dir) { S.collapsed.has(it.dir) ? S.collapsed.delete(it.dir) : S.collapsed.add(it.dir); ok(kl, 'toggled folder'); return render(); }
+      ok(kl, 'opened ' + it.p); openFile(it.p); S.focus = it.p === 'cv.pdf' ? 'explorer' : 'editor'; return render();
+    }
+    if (k === 'h') { const d = it.dir || (it.kid && it.p.split('/')[0]); if (d) { S.collapsed.add(d); S.expSel = expItems().findIndex(x => x.dir === d); ok(kl, 'closed folder'); } else none(kl); return render(); }
+    none(kl, 'not an Explorer key'); return;
+  }
+
+  const p = S.active, L = lines(p), c = pos(p), n = L.length;
+  // counts
+  if (/^[0-9]$/.test(k) && (k !== '0' || S.count)) {
+    if (!on('count')) { if (k !== '0') { off(kl, 'count'); } return; }
+    S.count += k; ok(kl, 'count ' + S.count); return render();
+  }
+  const cnt = Math.max(1, parseInt(S.count || '1', 10)), hadCount = !!S.count;
+  S.count = '';
+
+  if (S.pend === 'g') { S.pend = ''; if (k === 'g') { if (!on('gg')) { off('gg', 'gg'); return render(); } S.cur[p] = { l: 0, c: 0 }; ok('gg', 'top of file'); return render(); } }
+  if (S.pend === 'y') { S.pend = ''; if (k === 'y') { const line = L[c.l]; try { navigator.clipboard.writeText(line).catch(() => {}); } catch (err) {} log('yy', 'locked', 'copied the line (ADR 0001)'); return notify('Yank', `1 line yanked`); } }
+  if (k === 'g') { S.pend = 'g'; return render(); }
+  if (k === 'y') { S.pend = 'y'; return render(); }
+
+  const move = (id, fn, what) => { if (!on(id)) { off(kl, id); return render(); } fn(); ok((hadCount ? cnt : '') + kl, what); render(); };
+  const setLC = (l, col) => { l = Math.max(0, Math.min(l, n - 1)); S.cur[p] = { l, c: Math.min(col, maxCol(L[l])) }; };
+  const wantCol = () => S.want[p] ?? c.c;
+
+  if (e.ctrlKey) {
+    if (k === 'd' || k === 'u') return move('half', () => { const h = Math.max(1, Math.floor(S.rows / 2)) * (k === 'd' ? 1 : -1); S.top[p] = Math.max(0, (S.top[p] || 0) + h); setLC(c.l + h, wantCol()); }, k === 'd' ? 'half page down' : 'half page up');
+    if (k === 'h') { if (!on('expKeys')) { off(kl, 'expKeys'); return; } if (!S.expOpen) S.expOpen = true; S.focus = 'explorer'; const i = expItems().findIndex(x => x.p === p); if (i >= 0) S.expSel = i; ok(kl, 'jumped into the Explorer'); return render(); }
+    if (k === 'l') { none(kl, 'already in the Buffer'); return; }
+  }
+  if (k === 'j' || k === 'ArrowDown') return move('jk', () => { S.want[p] = wantCol(); setLC(c.l + cnt, S.want[p]); }, `down ${cnt} line${cnt > 1 ? 's' : ''}`);
+  if (k === 'k' || k === 'ArrowUp') return move('jk', () => { S.want[p] = wantCol(); setLC(c.l - cnt, S.want[p]); }, `up ${cnt} line${cnt > 1 ? 's' : ''}`);
+  if (k === 'h' || k === 'ArrowLeft') return move('hl', () => { const col = Math.max(0, c.c - cnt); S.cur[p] = { l: c.l, c: col }; S.want[p] = col; }, 'left');
+  if (k === 'l' || k === 'ArrowRight') return move('hl', () => { const col = Math.min(maxCol(L[c.l]), c.c + cnt); S.cur[p] = { l: c.l, c: col }; S.want[p] = col; }, 'right');
+  if (k === 'G') return move('gg', () => setLC(hadCount ? cnt - 1 : n - 1, 0), hadCount ? `line ${cnt}` : 'bottom of file');
+  if (k === 'w' || k === 'b' || k === 'e') return move('wbe', () => { let q = c; const f = k === 'w' ? wFwd : k === 'b' ? wBack : wEnd; for (let i = 0; i < cnt; i++) q = f(L, q); S.cur[p] = q; S.want[p] = q.c; }, { w: 'next word', b: 'back a word', e: 'end of word' }[k]);
+  if (k === '0') return move('line', () => { S.cur[p] = { l: c.l, c: 0 }; S.want[p] = 0; }, 'start of line');
+  if (k === '$') return move('line', () => { S.cur[p] = { l: c.l, c: maxCol(L[c.l]) }; S.want[p] = Infinity; }, 'end of line');
+  if (k === '}' || k === '{') return move('para', () => { let l = c.l; for (let i = 0; i < cnt; i++) { const d = k === '}' ? 1 : -1; l += d; while (l > 0 && l < n - 1 && L[l].trim() !== '') l += d; } setLC(l, 0); }, k === '}' ? 'next blank line' : 'previous blank line');
+  if (k === 'H' || k === 'L') return move('HL', () => { const i = S.buffers.indexOf(p), j = (i + (k === 'L' ? 1 : -1) + S.buffers.length) % S.buffers.length; S.active = S.buffers[j]; pushHist(S.active); }, k === 'L' ? 'next Buffer' : 'previous Buffer');
+  if (k === '/') { if (!on('slash')) return off(kl, 'slash'); return openCmd('/'); }
+  if (k === 'n' || k === 'N') { if (!on('nN')) return off(kl, 'nN'); if (!S.search) { none(kl, 'no search yet, try / first'); return; } ok(kl, k === 'n' ? 'next match' : 'previous match'); return findNext(k === 'n' ? 1 : -1); }
+  if (k === 'f') { if (!on('fEd')) { none(kl, 'in vim, f waits for a letter to jump to; not in this keymap'); return; } ok(kl, 'opened the Picker'); return openPicker(); }
+  if ('iaoIAOx'.includes(k) && k.length === 1) { if (!on('ro')) return off(kl, 'ro'); ok(kl, 'E21 read-only'); return notify('Read-only', "E21: Cannot make changes, 'modifiable' is off", 'error'); }
+  none(kl);
+});
+
+$('#ui').addEventListener('input', e => { if (e.target.id === 'pkin') { S.pq = e.target.value; S.psel = 0; renderPick(); } });
+
+scr.addEventListener('wheel', e => {
+  if (!S.powered || S.view !== 'editor' || S.overlay) return;
+  if (!e.target.closest('.ed')) return;
+  e.preventDefault();
+  if (!on('wheel')) { if (!LOG[0] || LOG[0].id !== 'wheel') off('wheel', 'wheel'); return; }
+  const p = S.active, n = lines(p).length, c = pos(p), d = Math.sign(e.deltaY) * 3, so = 3;
+  let top = Math.max(0, Math.min((S.top[p] || 0) + d, n - 1));
+  S.top[p] = top;
+  const lo = Math.min(n - 1, top + (top ? so : 0)), hi = Math.max(lo, Math.min(n - 1, top + S.rows - 1 - so));
+  const l = Math.max(lo, Math.min(c.l, hi));
+  S.cur[p] = { l, c: Math.min(c.c, maxCol(lines(p)[l])) };
+  if (!LOG[0] || LOG[0].key !== 'wheel') ok('wheel', 'scrolled');
+  render();
+}, { passive: false });
+
+scr.addEventListener('click', e => {
+  const t = e.target.closest('[data-nx],[data-open],[data-dir],[data-buf],[data-close],[data-dash],[data-line],[data-wk],[data-pick],[data-power],[data-slang]');
+  if (!e.target.closest('input')) scr.focus({ preventScroll: true });
+  if (!t) { if (S.overlay && !e.target.closest('.float')) closeOverlay(); return; }
+  const d = t.dataset;
+  S.leftSite = false;
+  if (d.nx) { S.notes = S.notes.filter(n => n.id !== +d.nx); ok('click', 'closed the Notification'); return render(); }
+  if (d.power) { ok('click', 'booted again'); return powerOn(); }
+  if (d.slang) { log('click EN', 'locked', 'language switch (decided in #5)'); return notify('Language', 'Switches to /es.'); }
+  if (d.close) { e.stopPropagation(); if (!on('tabs')) return off('click ✕', 'tabs'); ok('click ✕', 'closed ' + d.close.split('/').pop()); return closeBuffer(d.close); }
+  if (d.buf) { if (!on('tabs')) return off('click tab', 'tabs'); S.active = d.buf; pushHist(d.buf); ok('click tab', 'switched Buffer'); return render(); }
+  if (d.open) { if (!on('expClick')) return off('click', 'expClick'); ok('click', 'opened ' + d.open.split('/').pop()); S.focus = 'editor'; return openFile(d.open); }
+  if (d.dir) { if (!on('expClick')) return off('click', 'expClick'); S.collapsed.has(d.dir) ? S.collapsed.delete(d.dir) : S.collapsed.add(d.dir); ok('click', 'toggled ' + d.dir); return render(); }
+  if (d.dash) { const x = DASH.find(y => y.k === d.dash); log('click', 'locked', `${x.d} (decided in #6)`); return x.a(); }
+  if (d.line) {
+    if (!on('click')) return off('click line', 'click');
+    const code = t.querySelector('.code'), r = code.getBoundingClientRect();
+    const chw = (document.querySelector('.blk')?.offsetWidth) || 8.1;
+    const raw = lines(S.active)[+d.line];
+    const col = Math.max(0, Math.min(maxCol(raw), Math.floor((e.clientX - r.left - chw) / chw)));
+    S.cur[S.active] = { l: +d.line, c: col }; S.want[S.active] = col; S.focus = 'editor';
+    ok('click line', `cursor to line ${+d.line + 1}`); return render();
+  }
+  if (d.wk) { const w = wkEntries().find(x => x.k === d.wk); S.overlay = null; S.leader = null; if (!on(w.id)) { off('click ' + w.k, w.id); return render(); } ok('click ' + w.k, w.d); w.a(); if (S.leader) S.overlay = 'wk'; return render(); }
+  if (d.pick) { S.overlay = null; return openFile(d.pick); }
+});
+
+/* ---------- address bar ---------- */
+function goHist(i) {
+  S.hi = i; const w = S.hist[i];
+  if (w === '/') goDashboard(true); else { S.powered = true; openFile(w, null, true); }
+}
+$('#back').addEventListener('click', () => {
+  if (on('url') && S.hi > 0) { goHist(S.hi - 1); ok('Back', 'previous Buffer'); }
+  else { S.leftSite = true; if (on('url')) none('Back', 'nothing before the portfolio, so the browser leaves the site'); else off('Back', 'url'); render(); }
+  scr.focus({ preventScroll: true });
+});
+$('#fwd').addEventListener('click', () => { if (on('url') && S.hi < S.hist.length - 1) { goHist(S.hi + 1); ok('Forward', 'next Buffer'); } scr.focus({ preventScroll: true }); });
+
+/* ---------- checklist ---------- */
+const groupsEl = $('#groups');
+const SRC_LABEL = { mockup: 'mockup', lazyvim: 'LazyVim', vim: 'vim', proposal: 'proposal' };
+groupsEl.innerHTML = GROUPS.map(g => `<div class="group"><h2>${g}</h2>` + B.filter(b => b.g === g).map(b => {
+  const locked = b.src === 'locked';
+  return `<label class="kb${locked ? ' locked' : ''}" id="row-${b.id}"><input type="checkbox" id="cb-${b.id}"${locked ? ' disabled checked' : ''}><span class="box"></span><span class="top">${b.k.map(x => `<kbd>${esc(x)}</kbd>`).join('')}<span class="badge ${locked ? 'locked' : b.src}">${locked ? 'decided ' + esc(b.lock) : SRC_LABEL[b.src]}</span></span><span class="desc">${esc(b.d)}</span></label>`;
+}).join('') + `</div>`).join('');
+function syncRows() {
+  B.forEach(b => { $('#cb-' + b.id).checked = on(b.id); });
+  const free = B.filter(b => b.src !== 'locked');
+  $('#count').textContent = `${free.filter(b => on(b.id)).length}/${free.length} ticked`;
+  const fmt = b => `${b.k.join(' ')}  ${b.d.split('.')[0]}`;
+  const yes = free.filter(b => on(b.id)), no = free.filter(b => !on(b.id));
+  $('#pick').textContent = `#7 keymap picks\n\nON\n${yes.map(b => '  + ' + fmt(b)).join('\n') || '  (none)'}\n\nOFF\n${no.map(b => '  - ' + fmt(b)).join('\n') || '  (none)'}`;
+}
+groupsEl.addEventListener('change', e => {
+  const id = e.target.id.replace('cb-', ''); ON[id] = e.target.checked; save(); syncRows();
+  if (id === 'expOpen' && S.view === 'editor') S.expOpen = ON[id];
+  if (id === 'expKeys' && !ON[id]) S.focus = 'editor';
+  if (id === 'url' && !ON[id]) { S.hist = ['/']; S.hi = 0; }
+  render();
+});
+const preset = f => { B.forEach(b => { if (b.src !== 'locked') ON[b.id] = f(b); }); save(); syncRows(); render(); };
+$('#pMockup').addEventListener('click', () => preset(b => b.src === 'mockup'));
+$('#pRec').addEventListener('click', () => preset(b => b.src === 'mockup' || ['nN', 'ctrlf', 'url'].includes(b.id)));
+$('#pAll').addEventListener('click', () => preset(() => true));
+$('#reset').addEventListener('click', () => { fresh(); render(); scr.focus({ preventScroll: true }); });
+$('#copy').addEventListener('click', () => {
+  const t = $('#pick').textContent, done = () => { $('#copied').textContent = 'Copied. Paste it back in the chat.'; };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('#pick')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('#copied').textContent = 'Selected. Press Ctrl+C or ⌘C to copy.'; };
+  try { navigator.clipboard.writeText(t).then(done, fallback); } catch (err) { fallback(); }
+});
+
+syncRows();
+render();
+})();
+</script>
