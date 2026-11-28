@@ -1,0 +1,1543 @@
+<title>Mobile Layout Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a phone on a workbench. The phone Screen on the left, options and notes on the right.
+   On a real phone the Screen fills the page and the options live in a sheet behind the ⚙ button. Dark only, like the CRT it previews. */
+:root {
+  --bg: #111219;
+  --panel: #191b25;
+  --line: #2b2e3e;
+  --fg: #dde1f0;
+  --muted: #8d92ab;
+  --accent: #f5a97f;
+  --accent-ink: #1d1a1a;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --m-bg: #24273a; --m-mantle: #1e2030; --m-text: #cad3f5; --m-sub: #a5adcb; --m-blue: #8aadf4; --m-mauve: #c6a0f6; --m-peach: #f5a97f; --m-s0: #363a4f; --m-green: #a6da95;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 110px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 22px; }
+header { display: grid; gap: 6px; }
+h1 { font: 600 1.6rem/1.2 var(--mono); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 80ch; }
+.lede b { color: var(--fg); font-weight: 500; }
+.eyebrow { font: 500 0.72rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 10px; }
+
+.stage { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: start; }
+.phonecol { display: grid; gap: 10px; justify-items: center; }
+.phone {
+  --pw: 390px;
+  position: relative; width: var(--pw); height: min(820px, calc(100vh - 250px)); min-height: 560px;
+  background: #000; border: 11px solid #05060a; border-radius: 38px; overflow: hidden;
+  box-shadow: 0 0 0 1px #2a2c38, 0 40px 90px -30px #000;
+}
+.phone canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transform-origin: 50% 50%; }
+.kb { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; pointer-events: none; }
+.status { margin: 0; font: 0.78rem/1.45 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; max-width: 430px; }
+.status em { font-style: normal; color: var(--accent); }
+.nogl { position: absolute; z-index: 5; left: 10px; top: 10px; right: 10px; font: 500 12.5px/1.4 var(--sans); color: #fff; background: rgba(160,40,40,.85); padding: 8px 12px; border-radius: 8px; }
+
+/* Plain View (layout C, and :plain) — real HTML, Catppuccin Macchiato */
+.plain { position: absolute; inset: 0; z-index: 3; overflow-y: auto; background: var(--m-bg); color: var(--m-text); font: 15px/1.6 var(--sans); padding: 0 18px 40px; -webkit-overflow-scrolling: touch; }
+.plain .pv-top { position: sticky; top: 0; margin: 0 -18px 18px; padding: 10px 18px; background: var(--m-mantle); border-bottom: 1px solid var(--m-s0); display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 0.82rem; color: var(--m-sub); z-index: 1; }
+.plain .pv-top span { flex: 1 1 160px; min-width: 0; }
+.plain .pv-top button { font: 600 0.82rem/1 var(--sans); color: #181926; background: var(--m-blue); border: 0; border-radius: 6px; padding: 9px 12px; cursor: pointer; }
+.plain h1 { font: 700 1.7rem/1.15 var(--mono); color: var(--m-blue); margin: 4px 0 2px; }
+.plain .pv-meta { color: var(--m-sub); margin: 0 0 14px; font-size: 0.9rem; }
+.plain h2 { font: 700 1.05rem/1.3 var(--mono); color: var(--m-mauve); margin: 30px 0 8px; padding-top: 14px; border-top: 1px solid var(--m-s0); }
+.plain h3 { font: 600 0.95rem/1.3 var(--sans); color: var(--m-blue); margin: 18px 0 6px; }
+.plain p { margin: 0 0 10px; }
+.plain ul { margin: 0 0 10px; padding-left: 20px; }
+.plain li::marker { color: var(--m-peach); }
+.plain pre { font: 0.78rem/1.5 var(--mono); background: var(--m-mantle); border-radius: 6px; padding: 10px 12px; overflow-x: auto; color: var(--m-green); }
+.plain .pv-cv { display: inline-block; margin: 4px 0 0; font: 600 0.88rem/1 var(--sans); color: #181926; background: var(--m-peach); border: 0; border-radius: 6px; padding: 10px 14px; cursor: pointer; }
+.plain .pv-msg { color: var(--m-green); font-size: 0.85rem; margin-left: 10px; }
+
+.side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px 18px; min-width: 0; }
+.ctl { display: grid; gap: 7px; font-size: 0.82rem; color: var(--muted); }
+.ctl + .ctl { margin-top: 14px; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--bg); justify-self: start; }
+.seg button { font: 500 0.82rem/1 var(--sans); color: var(--muted); background: none; border: 0; padding: 9px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--bg)); color: var(--fg); }
+.seg button:focus-visible, .btn:focus-visible, .pill button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hint { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.desc { margin: 0; font-size: 0.9rem; }
+.desc + .desc { margin-top: 8px; }
+.desc b { font-weight: 600; }
+.look { margin: 0; padding-left: 18px; font-size: 0.88rem; display: grid; gap: 6px; }
+.look li::marker { color: var(--accent); }
+pre.pick { margin: 0 0 12px; font: 0.78rem/1.6 var(--mono); white-space: pre-wrap; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; }
+.btn { font: 600 0.85rem/1 var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 7px; padding: 10px 14px; cursor: pointer; }
+.btn.ghost { color: var(--fg); background: transparent; border: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.small { color: var(--muted); font-size: 0.78rem; margin: 10px 0 0; }
+code { font-family: var(--mono); font-size: 0.86em; color: var(--fg); }
+
+/* the floating layout switcher */
+.pill { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 2px; padding: 4px; background: #f3f0ea; color: #16171d; border-radius: 999px; box-shadow: 0 10px 30px -8px rgba(0,0,0,.7); font: 600 0.85rem/1 var(--sans); white-space: nowrap; }
+.pill button { font: inherit; color: inherit; background: none; border: 0; border-radius: 999px; min-width: 40px; height: 40px; padding: 0 10px; cursor: pointer; }
+.pill button:active { background: #dcd8cf; }
+.pill .lbl { padding: 0 6px; min-width: 0; }
+.pill .lbl b { font-family: var(--mono); margin-right: 6px; }
+.pill .gear { display: none; border-left: 1px solid #cfcabf; border-radius: 0 999px 999px 0; }
+
+@media (max-width: 760px) {
+  body { padding-block: 0 96px; }
+  header { display: none; }
+  .stage { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .phonecol { gap: 6px; }
+  .status { display: none; }
+  .phone { width: auto !important; align-self: stretch; justify-self: stretch;
+    margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+    height: calc(100svh - 92px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: 420px; border: 0; border-radius: 0; box-shadow: none; }
+  .widthCtl { display: none !important; }
+  .pill .gear { display: inline-block; }
+  .side { position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; max-height: 78svh; overflow-y: auto; background: var(--bg);
+    border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -20px 50px -10px #000;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    transform: translateY(105%); transition: transform .22s ease; }
+  body.sheet .side { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .side { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span>~/</span>franco · on a phone</h1>
+    <p class="lede">Prototype for <b>issue #10</b>. Three ways the editor could work on a phone, using the real CRT Screen. Flip layouts with the pill at the bottom, then tap around the phone. It works best <b>on your actual phone</b>: open this same link there and the Screen fills it.</p>
+  </header>
+
+  <div class="stage">
+    <div class="phonecol">
+      <div class="phone" id="phone">
+        <canvas id="gl" tabindex="0" aria-label="Phone Screen prototype. Tap to interact."></canvas>
+        <input class="kb" id="kb" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Type here">
+        <div class="plain" id="plain" hidden></div>
+        <div class="nogl" id="nogl" hidden>This browser has no WebGL2, so the CRT effect is off.</div>
+      </div>
+      <p class="status" id="status">Loading…</p>
+    </div>
+
+    <aside class="side" id="side" aria-label="Options and notes">
+      <div class="card">
+        <p class="eyebrow">This layout</p>
+        <div id="desc"></div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Options</p>
+        <div class="ctl">Screen Effect
+          <div class="seg" id="effectSeg">
+            <button type="button" data-v="full">Full</button>
+            <button type="button" data-v="lighter">Lighter</button>
+            <button type="button" data-v="off">Off</button>
+          </div>
+          <p class="hint" id="effectHint"></p>
+          <p class="hint" id="fxline"></p>
+        </div>
+        <div class="ctl">Self-test on a narrow Screen
+          <div class="seg" id="fitSeg">
+            <button type="button" data-v="leaders">Shorter dot leaders</button>
+            <button type="button" data-v="shrink">Smaller font</button>
+          </div>
+          <p class="hint">Shows during the boot. Press <b>Replay boot</b> to see it again.</p>
+        </div>
+        <div class="ctl widthCtl">Phone width (desktop only)
+          <div class="seg" id="pwSeg">
+            <button type="button" data-v="360">360</button>
+            <button type="button" data-v="390">390</button>
+            <button type="button" data-v="430">430</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button type="button" class="btn" id="replay">Replay boot</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Look for</p>
+        <ul class="look">
+          <li><b>A:</b> is the tap bar enough, or do you miss the keys? Is the Files drawer easy to open and close?</li>
+          <li><b>B:</b> does it still feel like Neovim, or like a generic app? Is <code>‹ Back</code> enough to get around?</li>
+          <li><b>C:</b> after the boot, does landing on plain HTML feel like a let-down or a relief?</li>
+          <li><b>Effect:</b> does Lighter look too soft? Does Full stutter or warm up the phone after a minute?</li>
+          <li><b>Self-test:</b> which one reads better at a glance?</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Your pick</p>
+        <pre class="pick" id="pick"></pre>
+        <button type="button" class="btn" id="copy">Copy pick</button>
+        <p class="small">Paste it back in the chat. All file content is example text. Shaders adapted from React Bits Texture Lab, © 2026 David Haz, MIT + Commons Clause.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<nav class="pill" aria-label="Layout switcher">
+  <button type="button" id="prev" aria-label="Previous layout">‹</button>
+  <span class="lbl" id="lbl"></span>
+  <button type="button" id="next" aria-label="Next layout">›</button>
+  <button type="button" class="gear" id="gear" aria-label="Options and notes" aria-expanded="false">⚙</button>
+</nav>
+
+<script>
+/*
+ * Throwaway prototype for FrancoLedArg/portfolio#10 (mobile layout).
+ * The CRT and bloom shaders are adapted from React Bits Texture Lab
+ * (src/tools/texture-lab/effects/{crt,bloom}.js and engine/{glsl,blur}.js).
+ * Copyright (c) 2026 David Haz. MIT + Commons Clause License Condition v1.0:
+ * permission to use, copy, modify, merge, publish and distribute as part of an
+ * application, website or product; the components and tools may not be sold,
+ * sublicensed or redistributed on their own, alone, in a bundle or as a ported version.
+ * The power-on/power-off "tube" uniforms are added for these prototypes.
+ */
+(() => {
+const $ = s => document.querySelector(s);
+const phone = $('#phone'), kb = $('#kb'), plainEl = $('#plain');
+let view = $('#gl');
+const gl = view.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+const src = document.createElement('canvas');
+const g = src.getContext('2d');
+const narrowMQ = matchMedia('(max-width: 760px)');
+
+/* ---------------- settings (ADR 0001) and colors (#4, Catppuccin Macchiato) ---------------- */
+const P = { curvature: 0.15, lines: 3.2, scan: 0.35, glow: 0.25, convergence: 0.8, vignette: 0.45, flicker: 0.15, roll: 0.25,
+  bThreshold: 0.25, bIntensity: 0.9, bRadius: 0.75 };
+const C = { bg: '#24273a', mantle: '#1e2030', crust: '#181926', black: '#000000', s0: '#363a4f', s1: '#494d64', ov0: '#6e738d', ov2: '#939ab7', sub: '#a5adcb', text: '#cad3f5',
+  blue: '#8aadf4', green: '#a6da95', yellow: '#eed49f', peach: '#f5a97f', red: '#ed8796', mauve: '#c6a0f6', lav: '#b7bdf8', teal: '#8bd5ca', bgx: '#24273a' };
+
+const LAYOUTS = ['A', 'B', 'C'];
+const LNAME = { A: 'Pocket Neovim', B: 'Dashboard as the menu', C: 'Plain View on phones' };
+const LDESC = {
+  A: `<p class="desc"><b>A) Pocket Neovim.</b> The same editor, fitted to a phone. A tap bar at the bottom replaces the keys: <b>Files</b> opens the Explorer as a drawer, <b>Find</b> is the Picker, <b>Keys</b> is Which-key, <b>:</b> is the Command Line, <b>Home</b> is the Dashboard.</p>
+      <p class="desc"><b>Version 2</b> (your pick): a margin around the page content so text stays off the curve (the bars still run edge to edge), a taller tab bar with the icon above the label and the selected one marked by an orange icon only, slimmer line numbers, a slightly smaller font (13px), a smaller logo on the Dashboard, the Cmdline suggestions inside its box, and the smaller font during the boot.</p>
+      <p class="desc">One Buffer at a time, its name across the top. <b>Swipe left or right</b> on the text to switch between open Buffers. Drag up and down to scroll. Try <code>:q</code> from the tap bar.</p>`,
+  B: `<p class="desc"><b>B) Dashboard as the menu.</b> No Explorer, no tap bar. The Dashboard is the home screen. Tap an entry and that file or folder opens full-screen, with <code>‹ Back</code> and a search button across the top.</p>
+      <p class="desc">Simpler for people who've never seen Neovim, but closer to a normal app.</p>`,
+  C: `<p class="desc"><b>C) Plain View on phones.</b> The Boot Sequence plays with the CRT look, then phones land on the <b>Plain View</b>: real HTML, readable and scrollable, in Macchiato colors.</p>
+      <p class="desc">A button at the top lets visitors <b>try the editor anyway</b> (it opens layout A).</p>`,
+};
+const ENAME = { full: 'full', lighter: 'lighter', off: 'off' };
+const EHINT = {
+  full: 'Sharp, every frame (up to 60 per second). Heaviest on the battery.',
+  lighter: 'Drawn at a quarter of the pixels on most phones and 30 frames per second. Softer text, much less work.',
+  off: 'No curve, glow or scanlines. Same editor, plain pixels.',
+};
+const FNAME = { leaders: 'shorter dot leaders, wrap when a line is still too long', shrink: 'smaller font during the boot' };
+
+/* ---------------- state ---------------- */
+const S = {
+  layout: 'A', effect: 'full', fit: 'shrink', pw: 390,
+  mode: 'black',        // black | boot | ui | plain | offanim | off
+  plan: null, t0: 0, seg: null, segP: 0, offAt: 0,
+  cEditor: false, plainFrom: null,
+  // layout A
+  view: 'dash', bufs: [], active: null, top: {},
+  drawer: false, drawerP: 0, drawerTop: 0, openDirs: new Set(), drawerHi: null,
+  // layout B
+  stack: ['dash'],
+  // shared
+  overlay: null, q: '', pickTop: 0,
+  notes: [], tube: [1, 1, 0, 0], bright: 1, screenBg: 'black',
+};
+
+/* ---------------- content (example text; Whoami has no portrait, #9) ---------------- */
+const BT = '```';
+const FILES = {
+'README.md': `---
+name: Franco
+role: <role>
+location: <city>, Argentina
+available: true
+cv: cv.pdf
+---
+
+# Franco
+
+<One or two lines: who you are and what you like to build.>
+
+## Contact
+- email     <you@example.com>
+- github    <github.com/you>
+- linkedin  <linkedin.com/in/you>
+
+## Status
+- open to work: yes
+
+## Skills
+- TypeScript, React, Node
+- Astro, WebGL, a bit of Lua
+
+## Now
+- Building this portfolio
+- Reading about CRT shaders
+- Tweaking my Neovim config, again`,
+'experience/acme.md': `---
+company: Acme
+title: <title>
+start: 2024-03
+end: present
+current: true
+stack: [typescript, react, node]
+---
+
+# <title> @ Acme
+
+<What the team does, in one line.>
+
+## What I did
+- <Shipped X, which made Y possible>
+- <Owned Z end to end>
+- <A number that shows the impact>
+
+## Stack
+- TypeScript everywhere
+- React on the front, Node on the back`,
+'experience/initech.md': `---
+company: Initech
+title: <title>
+start: 2022-01
+end: 2024-02
+current: false
+stack: [javascript, vue, postgres]
+---
+
+# <title> @ Initech
+
+<What the team does, in one line.>
+
+## What I did
+- <Thing you are proud of>
+- <Thing you learned>`,
+'projects/portfolio.md': `---
+name: portfolio
+year: 2026
+stack: [astro, react, webgl]
+status: in progress
+---
+
+# portfolio
+
+This site: a CRT Screen running a LazyVim-style editor. Content lives in Markdown with typed frontmatter.
+
+## Highlights
+- Boot Sequence and CRT power-off
+- vim keys, plus mouse and touch
+- Plain View for recruiters and crawlers
+- llms.txt and a .md URL for every file
+
+## How it works
+- The editor is painted onto a canvas as a character grid
+- Bloom and CRT shaders run over the whole Screen
+- A hidden HTML copy feeds the Plain View`,
+'projects/example.md': `---
+name: <project>
+year: <yyyy>
+stack: [<tech>, <tech>]
+repo: <github.com/you/project>
+---
+
+# <project>
+
+<What it does and why you built it.>
+
+## What was hard
+- <A problem and how you solved it>`,
+'timeline.md': `# timeline
+
+Milestones, newest first.
+
+- 2026-11  Started this portfolio
+- <yyyy-mm>  <Certification>
+- <yyyy-mm>  <Talk or meetup>
+- <yyyy>  <Degree>, <school>`,
+'extras.md': `# extras
+
+Side quests and ongoing tinkering.
+
+- <Hobby>: <one line about it>
+- <Something you build for fun>
+- Neovim config, forever unfinished`,
+'skills.lua': `-- skills, written as a LazyVim plugin spec
+return {
+  { "typescript", version = "5.x" },
+  { "react", version = "19" },
+  { "astro", version = "5" },
+  { "node", version = "22" },
+  { "git", opts = { daily = true } },
+  -- <add your real skills here>
+}`,
+};
+const ALL = ['README.md', 'experience/acme.md', 'experience/initech.md', 'projects/example.md', 'projects/portfolio.md', 'timeline.md', 'extras.md', 'skills.lua', 'cv.pdf'];
+const TREE = [
+  { dir: 'experience', kids: ['acme.md', 'initech.md'] },
+  { dir: 'projects', kids: ['example.md', 'portfolio.md'] },
+  'README.md', 'cv.pdf', 'extras.md', 'skills.lua', 'timeline.md',
+];
+const ICON = p => p.endsWith('/') ? '▸' : p.endsWith('.lua') ? '☾' : p.endsWith('.pdf') ? '▤' : '≡';
+const CONTACT_LINE = FILES['README.md'].split('\n').findIndex(l => l.startsWith('## Contact'));
+const front = p => { const m = /^---\n([\s\S]*?)\n---/.exec(FILES[p] || ''); const o = {}; if (m) m[1].split('\n').forEach(l => { const i = l.indexOf(':'); if (i > 0) o[l.slice(0, i).trim()] = l.slice(i + 1).trim(); }); return o; };
+
+/* the boot, as decided in #8 */
+const CT = {
+  h1: 'FRANCO-OS BIOS v26.0',
+  h2: '(C) 2026 Franco. All rights reserved.',
+  bios: [
+    { l: 'CPU0: human brain, 1 core', r: 'OK', c: 'green' },
+    { l: 'Memory test: 640K', r: 'idk, I forgot', c: 'yellow' },
+    { l: 'Uptime', r: '26 years, no reboots', c: 'green' },
+    { l: 'Region: Argentina', r: 'UTC-3', c: 'green' },
+    { l: 'Drivers: es-AR, en', r: 'OK', c: 'green' },
+    { l: 'Peripherals: books, motorcycle, gamepad', r: 'OK', c: 'green' },
+    { l: 'Audio: Polyphia', r: 'on repeat', c: 'green' },
+    { l: 'Loading save: Super Metroid', r: 'still the best one', c: 'green' },
+    { l: 'Services: 3 Claude instances', r: 'running, probably arguing', c: 'green' },
+    { l: 'Product brain: UX polish daemon', r: "can't be stopped", c: 'yellow' },
+    { l: 'Checking for bugs', r: '3 found, shipped as features', c: 'yellow' },
+    { l: 'Mounting ~/franco', r: 'OK', c: 'green' },
+  ],
+  sub: 'F R A N C O - O S   v 2 6',
+  tty: 'FRANCO-OS v26 tty1', host: 'franco-os', user: 'visitor',
+  last: 'Last login: Sat Nov 28 11:14 on tty1', cmd: 'nvim',
+};
+const LOGO = (() => {
+  const L = {
+    F: ['███████╗', '██╔════╝', '█████╗  ', '██╔══╝  ', '██║     ', '╚═╝     '],
+    R: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██║  ██║', '╚═╝  ╚═╝'],
+    A: [' █████╗ ', '██╔══██╗', '███████║', '██╔══██║', '██║  ██║', '╚═╝  ╚═╝'],
+    N: ['███╗   ██╗', '████╗  ██║', '██╔██╗ ██║', '██║╚██╗██║', '██║ ╚████║', '╚═╝  ╚═══╝'],
+    C: [' ██████╗', '██╔════╝', '██║     ', '██║     ', '╚██████╗', ' ╚═════╝'],
+    O: [' ██████╗ ', '██╔═══██╗', '██║   ██║', '██║   ██║', '╚██████╔╝', ' ╚═════╝ '],
+  };
+  return [0, 1, 2, 3, 4, 5].map(r => [...'FRANCO'].map(c => L[c][r]).join(''));
+})();
+const LOGO_W = [...LOGO[0]].length;
+const DASH = [
+  { k: 'w', ic: '☺', d: 'Whoami' },
+  { k: 'p', ic: '▤', d: 'Projects' },
+  { k: 'e', ic: '◈', d: 'Experience' },
+  { k: 'c', ic: '✉', d: 'Contact' },
+  { k: 'd', ic: '↓', d: 'Download CV' },
+  { k: 's', ic: '⇄', d: 'Español' },
+];
+let MS = '0.00';
+
+/* ---------------- the boot plan (#8: six steps, about 8.5s) ---------------- */
+function makePlan() {
+  const segs = [
+    { id: 'power', dur: 1.0 }, { id: 'bios', dur: Math.max(1.4, 0.29 * CT.bios.length) }, { id: 'banner', dur: 1.4 },
+    { id: 'login', dur: 1.6 }, { id: 'nvim', dur: 0.7 }, { id: 'dash', dur: 0.3 },
+  ];
+  let t = 0; segs.forEach(s => { s.start = t; t += s.dur; });
+  return { segs, total: t };
+}
+
+/* ---------------- character grid ---------------- */
+let cssW = 0, cssH = 0, dpr = 1, fontPx = 14, cols = 0, rows = 0, cw = 8, chh = 20, small = false, ratio = 0.6;
+let padX = 0, padY = 0, inW = 0, inH = 0;
+const PM = 2;   // page margin: page content keeps 2 characters off the curved edges; bars run edge to edge
+let CH, FG, BG, BD, CLK = [], SPR = [];
+let F0 = '', F1 = '';
+function gridInit() { const n = cols * rows; CH = new Array(n); FG = new Array(n); BG = new Array(n); BD = new Uint8Array(n); clearGrid(); }
+function clearGrid() { CH.fill(' '); FG.fill('text'); BG.fill('bg'); BD.fill(0); CLK = []; SPR = []; }
+function put(x, y, s, fg, bg, bold) {
+  if (y < 0 || y >= rows) return x + [...s].length;
+  for (const c of s) {
+    if (x >= 0 && x < cols) { const i = y * cols + x; CH[i] = c; if (fg) FG[i] = fg; if (bg) BG[i] = bg; BD[i] = bold ? 1 : 0; }
+    x++;
+  }
+  return x;
+}
+function fill(x0, y0, x1, y1, bg) { for (let y = Math.max(0, y0); y <= Math.min(rows - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(cols - 1, x1); x++) { const i = y * cols + x; CH[i] = ' '; BG[i] = bg; } }
+function clk(x0, x1, y0, y1, act) { CLK.push({ x0, x1, y0, y1, act }); }
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const blinkOn = () => Math.floor(performance.now() / 530) % 2 === 0;
+const center = s => Math.max(0, Math.floor((cols - [...s].length) / 2));
+
+function notify(title, msg, level = 'info') {
+  S.notes.push({ title, msg, level, until: performance.now() + 5000 });
+  if (S.notes.length > 2) S.notes.shift();
+  dirty();
+}
+function wrapWords(s, w) {
+  if (w < 4) return [s];
+  const out = []; let line = '';
+  for (let word of s.split(' ')) {
+    while (word.length > w) { if (line) { out.push(line); line = ''; } out.push(word.slice(0, w)); word = word.slice(w); }
+    if ((line ? line + ' ' + word : word).length > w) { out.push(line); line = word; } else line = line ? line + ' ' + word : word;
+  }
+  out.push(line); return out;
+}
+function drawNotes(y) {
+  const w = Math.min(cols - 2, 38), x0 = cols - w - 1;
+  for (const nt of S.notes) {
+    const col = nt.level === 'error' ? 'red' : nt.level === 'warn' ? 'yellow' : 'blue';
+    const body = wrapWords(nt.msg, w - 4);
+    put(x0, y, '╭' + '─'.repeat(w - 2) + '╮', col, 'bgx'); put(x0 + 2, y, ` ${nt.title} `, col, 'bgx', true);
+    body.forEach((l, i) => { put(x0, y + 1 + i, '│', col, 'bgx'); put(x0 + 1, y + 1 + i, ' ' + l.padEnd(w - 3), 'text', 'bgx'); put(x0 + w - 1, y + 1 + i, '│', col, 'bgx'); });
+    put(x0, y + 1 + body.length, '╰' + '─'.repeat(w - 2) + '╯', col, 'bgx');
+    const y0 = y, y1 = y + body.length + 1, n = nt;
+    clk(x0, x0 + w, y0, y1, () => { S.notes = S.notes.filter(k => k !== n); dirty(); });
+    y += body.length + 3;
+  }
+}
+function box(x0, y0, w, h, col, title) {
+  fill(x0, y0, x0 + w - 1, y0 + h - 1, 'bgx');
+  put(x0, y0, '╭' + '─'.repeat(w - 2) + '╮', col);
+  for (let y = y0 + 1; y < y0 + h - 1; y++) { put(x0, y, '│', col); put(x0 + w - 1, y, '│', col); }
+  put(x0, y0 + h - 1, '╰' + '─'.repeat(w - 2) + '╯', col);
+  if (title) put(x0 + 2, y0, ` ${title} `, col, null, true);
+}
+/* the FRANCO logo, scaled down to fit narrow Screens (#9: one logo, drawn as text) */
+const DASH_INSET = 8;   // extra room around the logo on the Dashboard, so it doesn't fill the phone
+function logo(y, color, inset = 0) {
+  const sc = Math.min(1, (cols - 2 * PM - inset) / LOGO_W);
+  const lw = LOGO_W * cw * sc, lh = 6 * chh * sc;
+  SPR.push({ art: LOGO, x: (inW - lw) / 2, y: y * chh, w: cw * sc, h: chh * sc, color });
+  return Math.ceil(lh / chh);
+}
+
+/* ---------------- the boot (#8), drawn for a narrow Screen ---------------- */
+function drawBios(p) {
+  const x = PM; let y = 1;
+  put(x, y++, CT.h1, 'blue', null, true);
+  put(x, y++, CT.h2, 'ov2');
+  y++;
+  const list = CT.bios, n = list.length, avail = cols - 2 * PM;
+  list.forEach((ln, i) => {
+    const q = clamp01(p * n * 1.08 - i);
+    if (q <= 0) return;
+    let lx = x, ly = y, dEnd, rx;
+    if (small) {
+      // the desktop look: dots out to a fixed column
+      dEnd = Math.max(ln.l.length + 2, Math.min(46, cols - 4 - ln.r.length));
+      rx = x + dEnd + 1;
+      put(lx, ly, ln.l, 'text');
+      const total = dEnd - ln.l.length - 1, dots = Math.floor(clamp01(q / 0.75) * total);
+      put(x + ln.l.length + 1, ly, '.'.repeat(dots), 'ov0');
+      if (q >= 0.85) put(rx, ly, ln.r, ln.c); else if (blinkOn()) put(x + ln.l.length + 1 + dots, ly, '█', 'text');
+      y++; return;
+    }
+    // shorter leaders: result pinned to the right edge; wrap onto a second line when it can't fit
+    const one = ln.l.length + 1 + 2 + 1 + ln.r.length <= avail;
+    put(lx, ly, ln.l, 'text');
+    let dStart;
+    if (one) { dStart = x + ln.l.length + 1; rx = x + avail - ln.r.length; }
+    else { y++; ly = y; dStart = x + 2; rx = x + avail - ln.r.length; }
+    const total = Math.max(1, rx - 1 - dStart), dots = Math.floor(clamp01(q / 0.75) * total);
+    put(dStart, ly, '.'.repeat(dots), 'ov0');
+    if (q >= 0.85) put(rx, ly, ln.r, ln.c); else if (blinkOn()) put(dStart + dots, ly, '█', 'text');
+    y++;
+  });
+}
+function drawBanner(p) {
+  const sc = Math.min(1, (cols - 2 * PM) / LOGO_W), hRows = Math.ceil(6 * sc) + 2;
+  const y0 = Math.floor((rows - hRows) / 2) - 1;
+  if (p > 0.05) logo(y0, 'text');
+  if (p > 0.45) put(center(CT.sub), y0 + hRows, CT.sub, 'ov2');
+}
+function prompt(x, y) { x = put(x, y, `${CT.user}@${CT.host}`, 'green'); x = put(x, y, ':', 'text'); x = put(x, y, '~', 'blue'); return put(x, y, '$ ', 'text'); }
+function drawLogin(p, full) {
+  const x = PM;
+  put(x, 1, CT.tty, 'ov2');
+  const typed = CT.user, k = full ? typed.length : Math.floor(clamp01((p - 0.12) / 0.45) * typed.length);
+  let cx = put(x, 3, `${CT.host} login: `, 'text');
+  cx = put(cx, 3, typed.slice(0, k), 'text');
+  if (!(full || p > 0.7)) { if (blinkOn() || k < typed.length) put(cx, 3, '█', 'text'); return null; }
+  put(x, 4, CT.last, 'ov2');
+  return { x: prompt(x, 5), y: 5 };
+}
+function drawNvim(p) {
+  const at = drawLogin(1, true);
+  const k = Math.floor(clamp01(p / 0.6) * CT.cmd.length);
+  const cx = put(at.x, at.y, CT.cmd.slice(0, k), 'text');
+  if (p < 0.8) put(cx, at.y, '█', 'text');
+}
+function drawSkipHint() { const t = cols >= 52 ? 'press any key or tap to skip' : 'tap to skip'; put(cols - t.length - PM, rows - 2, t, 'ov0'); }
+function drawOff() {
+  const t = 'press any key to power on', x = center(t + ' '), y = Math.floor(rows / 2);
+  const end = put(x, y, t, 'ov2'); if (blinkOn()) put(end + 1, y, '█', 'ov2');
+}
+
+/* ---------------- buffers: text with simple Markdown/Lua colors ---------------- */
+const KIND = {};
+function kinds(p) {
+  if (KIND[p]) return KIND[p];
+  let fm = false, code = false;
+  const lua = p.endsWith('.lua');
+  return (KIND[p] = (FILES[p] || '').split('\n').map((l, i) => {
+    if (i === 0 && l === '---') { fm = true; return 'fmd'; }
+    if (fm) { if (l === '---') { fm = false; return 'fmd'; } return 'fm'; }
+    if (l.startsWith('```')) { code = !code; return 'fence'; }
+    if (code) return 'code';
+    if (lua) return l.trim().startsWith('--') ? 'cm' : 'lua';
+    if (l.startsWith('# ')) return 'h1';
+    if (l.startsWith('## ')) return 'h2';
+    if (/^\s*- /.test(l)) return 'li';
+    return 'p';
+  }));
+}
+const DL = {};
+function dispLines(p, w) {
+  const key = p + '|' + w; if (DL[key]) return DL[key];
+  const ks = kinds(p), out = [];
+  (FILES[p] || '').split('\n').forEach((ln, i) => {
+    const parts = ln.length <= w ? [ln] : wrapWords(ln, w);
+    parts.forEach((t, j) => out.push({ n: j === 0 ? i + 1 : 0, t, k: ks[i], src: i, j }));
+  });
+  return (DL[key] = out);
+}
+function drawLine(x, y, d) {
+  const t = d.t;
+  switch (d.k) {
+    case 'fmd': case 'fence': put(x, y, t, 'ov0'); break;
+    case 'fm': if (d.j === 0 && t.includes(':')) { const i = t.indexOf(':'); put(put(x, y, t.slice(0, i + 1), 'blue'), y, t.slice(i + 1), 'green'); } else put(x, y, t, 'green'); break;
+    case 'h1': put(x, y, t, 'blue', null, true); break;
+    case 'h2': put(x, y, t, 'mauve', null, true); break;
+    case 'li': if (d.j === 0) { const m = /^(\s*)- /.exec(t); const nx = put(x, y, m[1] + '-', 'peach'); put(nx, y, t.slice(m[0].length - 1), 'text'); } else put(x, y, '  ' + t, 'text'); break;
+    case 'code': put(x, y, t, 'green'); break;
+    case 'cm': put(x, y, t, 'ov2'); break;
+    case 'lua': { let cx = x; for (const part of t.split(/("[^"]*")/)) cx = put(cx, y, part, part.startsWith('"') ? 'green' : 'text'); break; }
+    default: put(x, y, t, 'text');
+  }
+}
+function textArea(p, y0, y1, gutter) {
+  const gw = gutter ? 3 : 0, w = cols - 2 * PM - gw, dl = dispLines(p, w), h = y1 - y0 + 1;
+  const maxTop = Math.max(0, dl.length - h + 2);
+  S.top[p] = clamp(S.top[p] || 0, 0, maxTop);
+  const top = S.top[p];
+  for (let r = 0; r < h; r++) {
+    const d = dl[top + r], y = y0 + r;
+    if (!d) { if (gutter) put(PM, y, '~', 's1'); continue; }
+    if (gutter && d.n) put(PM, y, String(d.n).padStart(2), 's1');
+    drawLine(PM + gw, y, d);
+  }
+  return { top, total: dl.length, h };
+}
+function lineToTop(p, srcLine, gutter) {
+  const w = cols - 2 * PM - (gutter ? 3 : 0);
+  const i = dispLines(p, w).findIndex(d => d.src === srcLine && d.j === 0);
+  return Math.max(0, i);
+}
+
+/* ---------------- shared screens ---------------- */
+function dashAct(k) {
+  const A = ui() === 'A';
+  if (k === 'w') return openFile('README.md');
+  if (k === 'p') return A ? openDrawer('projects') : push('list:projects');
+  if (k === 'e') return A ? openDrawer('experience') : push('list:experience');
+  if (k === 'c') return openFile('README.md', CONTACT_LINE);
+  if (k === 'd') return notify('Download CV', 'Would download cv.pdf. Not wired in this prototype.');
+  if (k === 's') return notify('Español', 'Would switch to /es (#5). Not wired in this prototype.');
+  if (k === '/') return openOverlay('picker');
+}
+function drawDash(bottom, withSearch) {
+  const entries = withSearch ? [...DASH, { k: '/', ic: '⌕', d: 'Search everything' }] : DASH;
+  const sc = Math.min(1, (cols - 2 * PM - DASH_INSET) / LOGO_W), lRows = Math.ceil(6 * sc);
+  const h = lRows + 2 + entries.length * 2 + 2;
+  let y = Math.max(1, Math.floor((rows - bottom - h) / 2));
+  logo(y, 'blue', DASH_INSET);
+  y += lRows + 2;
+  const mw = Math.min(34, cols - 4), mx = Math.floor((cols - mw) / 2);
+  for (const d of entries) {
+    put(mx + 1, y, d.ic, 'blue'); put(mx + 4, y, d.d, 'text'); put(mx + mw - 2, y, d.k, 'peach');
+    clk(mx - 1, mx + mw + 1, y, y + 1, () => dashAct(d.k)); y += 2;
+  }
+  const foot = `⚡ Franco loaded 14/14 skills in ${MS}ms`;
+  const fx = center(foot);
+  if ([...foot].length <= cols - 2 * PM) { put(fx, y, '⚡', 'yellow'); put(fx + 2, y, foot.slice(2), 'ov2'); }
+  else { const f2 = `⚡ 14/14 skills in ${MS}ms`; put(center(f2), y, '⚡', 'yellow'); put(center(f2) + 2, y, f2.slice(2), 'ov2'); }
+}
+function searchItems() {
+  const items = [
+    ...ALL.map(p => ({ label: p, ic: ICON(p), p })),
+    { label: 'Whoami › Contact', ic: '#', p: 'README.md', line: CONTACT_LINE },
+    { label: 'Whoami › Skills', ic: '#', p: 'README.md', line: FILES['README.md'].split('\n').findIndex(l => l.startsWith('## Skills')) },
+  ];
+  const q = S.q.toLowerCase().replace(/\s+/g, '');
+  if (!q) return items;
+  return items.filter(it => { let i = 0; const s = it.label.toLowerCase(); for (const c of s) if (c === q[i]) i++; return i === q.length; });
+}
+function drawPicker(y0, y1) {
+  const x0 = 0, w = cols;
+  box(x0, y0, w, y1 - y0 + 1, 'blue', 'Find');
+  put(w - 4, y0, ' ✕ ', 'blue', 'bgx', true); clk(w - 6, w, y0, y0 + 1, () => closeOverlay());
+  let cx = put(2, y0 + 1, '❯ ', 'peach'); cx = put(cx, y0 + 1, S.q, 'text');
+  if (blinkOn()) put(cx, y0 + 1, '█', 'text');
+  const items = searchItems();
+  put(w - 3 - `${items.length}/${ALL.length + 2}`.length, y0 + 1, `${items.length}/${ALL.length + 2}`, 'ov0');
+  put(x0, y0 + 2, '├' + '─'.repeat(w - 2) + '┤', 'blue');
+  const slots = Math.floor((y1 - y0 - 3) / 2);
+  S.pickTop = clamp(S.pickTop, 0, Math.max(0, items.length - slots));
+  items.slice(S.pickTop, S.pickTop + slots).forEach((it, i) => {
+    const y = y0 + 3 + i * 2;
+    put(2, y, it.ic, 'blue'); put(4, y, it.label.slice(0, w - 6), 'text');
+    clk(1, w - 1, y, y + 1, () => { closeOverlay(); it.p === 'cv.pdf' ? dashAct('d') : openFile(it.p, it.line); });
+  });
+  if (!items.length) put(3, y0 + 4, 'No matches', 'ov0');
+  if (narrowMQ.matches || 'ontouchstart' in window) put(3, y1 - 1, 'type with the phone keyboard', 'ov0');
+}
+
+/* ---------------- layout A: Pocket Neovim ---------------- */
+const TABS = [
+  { ic: '☰', d: 'Files', act: () => (S.drawer ? closeDrawer() : openDrawer()), on: () => S.drawer },
+  { ic: '⌕', d: 'Find', act: () => toggleOverlay('picker'), on: () => S.overlay === 'picker' },
+  { ic: '?', d: 'Keys', act: () => toggleOverlay('keys'), on: () => S.overlay === 'keys' },
+  { ic: ':', d: 'Cmd', act: () => toggleOverlay('cmd'), on: () => S.overlay === 'cmd' },
+  { ic: '⌂', d: 'Home', act: () => { closeDrawer(true); closeOverlay(); S.view = 'dash'; dirty(); }, on: () => S.view === 'dash' && !S.drawer && !S.overlay },
+];
+function drawTabBar(y) {
+  fill(0, y, cols - 1, y + 3, 'mantle');
+  for (let x = 0; x < cols; x++) { const i = y * cols + x; CH[i] = '▔'; FG[i] = 's0'; }
+  const sw = cols / TABS.length;
+  TABS.forEach((t, i) => {
+    const x0 = Math.round(i * sw), x1 = Math.round((i + 1) * sw), on = t.on();
+    const mid = (x0 + x1 - 1) / 2;
+    put(Math.round(mid), y + 1, t.ic, on ? 'peach' : 'blue', null, true);
+    put(Math.round(mid - (t.d.length - 1) / 2), y + 2, t.d, 'sub');
+    clk(x0, x1, y, y + 3, t.act);
+  });
+}
+function drawStatusA(y, info) {
+  fill(0, y, cols - 1, y, 'mantle');
+  const mode = S.view === 'dash' ? ' DASH ' : ' NORMAL ';
+  let x = put(0, y, mode, 'crust', 'blue', true);
+  if (S.view === 'buf') {
+    put(x + 1, y, S.active.split('/').pop(), 'text', 'mantle');
+    const pct = info.total <= info.h ? 'All' : info.top === 0 ? 'Top' : info.top + info.h >= info.total ? 'Bot' : Math.round(info.top / (info.total - info.h) * 100) + '%';
+    const r = ` ${pct} `; put(cols - r.length, y, r, 'crust', 'peach', true);
+  } else put(x + 1, y, '~/franco', 'sub', 'mantle');
+}
+function drawBufBar() {
+  fill(0, 0, cols - 1, 0, 'mantle');
+  const p = S.active, i = S.bufs.indexOf(p), n = S.bufs.length;
+  let x = put(1, 0, ICON(p), 'blue', 'mantle'); put(x + 1, 0, p, 'text', 'mantle', true);
+  const r = n > 1 ? `‹ ${i + 1}/${n} ›  ✕` : '✕';
+  put(cols - r.length - 1, 0, r, 'ov2', 'mantle');
+  clk(cols - 4, cols, 0, 0, () => closeBuf(p));
+  if (n > 1) { clk(cols - r.length - 2, cols - r.length + 1, 0, 0, () => cycleBuf(-1)); clk(cols - r.length + 5, cols - r.length + 8, 0, 0, () => cycleBuf(1)); }
+}
+function drawerW() { return Math.min(cols - 8, 30); }
+function treeItems() {
+  const out = [];
+  for (const n of TREE) {
+    if (typeof n === 'string') { out.push({ p: n, d: 0 }); continue; }
+    const open = S.openDirs.has(n.dir);
+    out.push({ dir: n.dir, d: 0, open });
+    if (open) n.kids.forEach(k => out.push({ p: n.dir + '/' + k, name: k, d: 1 }));
+  }
+  return out;
+}
+function drawDrawer(yMax) {
+  const w = drawerW(), e = 1 - Math.pow(1 - S.drawerP, 3), x0 = Math.round(-w - 1 + (w + 1) * e);
+  for (let y = 0; y <= yMax; y++) for (let x = Math.max(0, x0 + w + 1); x < cols; x++) { const i = y * cols + x; FG[i] = 's1'; if (BG[i] !== 'bg') BG[i] = 'crust'; }
+  SPR.forEach(s => (s.color = 's1'));
+  clk(0, cols, 0, yMax, () => closeDrawer());
+  const X = x => x0 + x;
+  for (let y = 0; y <= yMax; y++) for (let x = 0; x < w; x++) if (X(x) >= 0) { const i = y * cols + X(x); CH[i] = ' '; BG[i] = 'mantle'; }
+  for (let y = 0; y <= yMax; y++) if (X(w) >= 0 && X(w) < cols) put(X(w), y, '│', 's0');
+  const clip = (x, y, s, fg, bg, bold) => { [...s].forEach((c, k) => { if (X(x + k) >= 0 && x + k < w) put(X(x + k), y, c, fg, bg, bold); }); };
+  clip(1, 0, ' ~/franco', 'blue', 'mantle', true);
+  const items = treeItems(), slots = Math.floor((yMax - 2) / 2);
+  S.drawerTop = clamp(S.drawerTop, 0, Math.max(0, items.length - slots));
+  items.slice(S.drawerTop, S.drawerTop + slots).forEach((it, i) => {
+    const y = 2 + i * 2, ind = 1 + it.d * 2;
+    const hi = it.p ? it.p === S.active : it.dir === S.drawerHi;
+    if (hi) for (let x = 0; x < w; x++) if (X(x) >= 0) BG[y * cols + X(x)] = 's0';
+    if (it.dir) { clip(ind, y, it.open ? '▾' : '▸', 'ov2', hi ? 's0' : 'mantle'); clip(ind + 2, y, '◫ ' + it.dir, 'blue', hi ? 's0' : 'mantle', true); }
+    else { clip(ind + 2, y, ICON(it.p) + ' ' + (it.name || it.p), it.p.endsWith('.pdf') ? 'peach' : 'text', hi ? 's0' : 'mantle'); }
+    if (S.drawerP > 0.95) clk(Math.max(0, x0), x0 + w, y, y + 1, () => {
+      if (it.dir) { S.openDirs.has(it.dir) ? S.openDirs.delete(it.dir) : S.openDirs.add(it.dir); S.drawerHi = it.dir; dirty(); }
+      else if (it.p === 'cv.pdf') dashAct('d');
+      else openFile(it.p);
+    });
+  });
+}
+const WK = [
+  ['w', 'Whoami'], ['p', 'Projects'], ['e', 'Experience'], ['c', 'Contact'],
+  ['d', 'Download CV'], ['s', 'Español'], ['␣', 'Find'], ['q', 'Quit'],
+];
+function drawKeys(yBottom) {
+  const h = 2 + (WK.length / 2) * 2 + 1, y0 = yBottom - h + 1;
+  clk(0, cols, 0, yBottom, () => closeOverlay());
+  box(0, y0, cols, h, 'blue', 'Which-key');
+  const colW = Math.floor((cols - 4) / 2);
+  WK.forEach(([k, d], i) => {
+    const cx = 1 + (i % 2) * colW, y = y0 + 2 + Math.floor(i / 2) * 2;
+    put(cx + 1, y, k, 'peach', null, true); put(cx + 3, y, '→', 'ov0'); put(cx + 5, y, d, i === 7 ? 'red' : 'text');
+    clk(cx, cx + colW, y - 1, y, () => { closeOverlay(); if (k === 'q') powerOff(); else if (k === '␣') openOverlay('picker'); else dashAct(k); });
+  });
+}
+function drawCmd() {
+  const w = cols, x0 = 0, y0 = Math.max(2, Math.floor(rows * 0.18));
+  const chips = ['q', 'help', 'plain', 'e timeline.md'].map(c => ({ c, lab: ` :${c} ` }));
+  const lines = [[]]; let lw = 4;
+  for (const ch of chips) { if (lw + ch.lab.length > w - 4) { lines.push([]); lw = 0; } lines[lines.length - 1].push(ch); lw += ch.lab.length + 1; }
+  const bh = 5 + lines.length * 2;
+  clk(0, cols, 0, rows - 5, () => closeOverlay());
+  box(x0, y0, w, bh, 'blue', 'Cmdline');
+  let cx = put(x0 + 2, y0 + 1, '❯ ', 'peach'); cx = put(cx, y0 + 1, ':' + S.q, 'text');
+  if (blinkOn()) put(cx, y0 + 1, '█', 'text');
+  clk(x0, x0 + w, y0, y0 + 1, () => kb.focus({ preventScroll: true }));
+  put(x0, y0 + 2, '├' + '─'.repeat(w - 2) + '┤', 'blue');
+  lines.forEach((ln, li) => {
+    const y = y0 + 4 + li * 2; let x = x0 + 2;
+    if (li === 0) { put(x, y, 'try', 'ov0'); x += 4; }
+    for (const ch of ln) { put(x, y, ch.lab, 'text', 's0'); const a = x; clk(a, a + ch.lab.length, y - 1, y + 1, () => { closeOverlay(); runCmd(ch.c); }); x += ch.lab.length + 1; }
+  });
+}
+function buildA() {
+  const yStat = rows - 5, yTab = rows - 4;
+  let info = null;
+  if (S.view === 'dash') drawDash(5, false);
+  else { drawBufBar(); info = textArea(S.active, 1, yStat - 1, true); }
+  drawStatusA(yStat, info);
+  drawTabBar(yTab);
+  if (S.drawer || S.drawerP > 0) drawDrawer(yStat);
+  if (S.overlay === 'keys') drawKeys(yStat);
+  else if (S.overlay === 'picker') { clk(0, cols, 0, yStat, () => {}); drawPicker(1, yStat - 1); }
+  else if (S.overlay === 'cmd') drawCmd();
+  drawNotes(1);
+}
+
+/* ---------------- layout B: Dashboard as the menu ---------------- */
+function topBar(title) {
+  fill(0, 0, cols - 1, 1, 'mantle');
+  put(1, 0, '‹ Back', 'blue', 'mantle', true);
+  const t = title.length > cols - 18 ? '…' + title.slice(-(cols - 19)) : title;
+  put(center(t), 0, t, 'text', 'mantle', true);
+  put(cols - 3, 0, '⌕', 'blue', 'mantle', true);
+  for (let x = 0; x < cols; x++) { const i = cols + x; CH[i] = '▁'; FG[i] = 's0'; }
+  clk(0, 9, 0, 1, () => back());
+  clk(cols - 6, cols, 0, 1, () => openOverlay('picker'));
+}
+function buildB() {
+  const cur = S.stack[S.stack.length - 1];
+  if (cur === 'dash') drawDash(0, true);
+  else if (cur.startsWith('list:')) {
+    const dir = cur.slice(5); topBar(dir + '/');
+    const kids = TREE.find(n => n.dir === dir).kids;
+    let y = 3;
+    kids.forEach(k => {
+      const p = dir + '/' + k, f = front(p);
+      const name = dir === 'projects' ? f.name : `${f.title} @ ${f.company}`;
+      const meta = dir === 'projects' ? `${f.year} · ${(f.stack || '').replace(/[[\]]/g, '')}` : `${f.start} → ${f.end}`;
+      put(2, y, '≡', 'blue'); put(4, y, name.slice(0, cols - 6), 'text', null, true);
+      put(4, y + 1, meta.slice(0, cols - 6), 'ov2'); put(cols - 3, y, '›', 'ov0');
+      for (let x = 2; x < cols - 2; x++) { const i = (y + 2) * cols + x; CH[i] = '┄'; FG[i] = 's0'; }
+      clk(0, cols, y - 1, y + 1, () => openFile(p)); y += 4;
+    });
+  } else {
+    const p = cur.slice(5); topBar(p);
+    textArea(p, 2, rows - 1, false);
+  }
+  if (S.overlay === 'picker') { clk(0, cols, 0, rows - 1, () => {}); drawPicker(0, rows - 1); }
+  drawNotes(cur === 'dash' ? 1 : 3);
+}
+
+/* ---------------- navigation ---------------- */
+const ui = () => (S.layout === 'B' ? 'B' : 'A');
+function resetUI() {
+  Object.assign(S, { view: 'dash', bufs: [], active: null, top: {}, drawer: false, drawerP: 0, drawerTop: 0, drawerHi: null, stack: ['dash'], overlay: null, q: '', notes: [] });
+  S.openDirs = new Set(); closeOverlay();
+}
+function openFile(p, line) {
+  if (!FILES[p]) { if (p === 'cv.pdf') return dashAct('d'); return notify('Error', `E447: Can't find file "${p}" in path`, 'error'); }
+  closeOverlay();
+  if (ui() === 'A') {
+    if (!S.bufs.includes(p)) S.bufs.push(p);
+    S.active = p; S.view = 'buf'; closeDrawer();
+    if (line != null) S.top[p] = lineToTop(p, line, true);
+  } else {
+    push('file:' + p);
+    if (line != null) S.top[p] = lineToTop(p, line, false);
+  }
+  dirty();
+}
+function push(v) { S.stack.push(v); dirty(); }
+function back() {
+  if (S.overlay) return closeOverlay();
+  if (ui() === 'A') {
+    if (S.drawer) return closeDrawer();
+    if (S.view === 'buf') { S.view = 'dash'; dirty(); }
+    return;
+  }
+  if (S.stack.length > 1) S.stack.pop(); dirty();
+}
+function closeBuf(p) {
+  const i = S.bufs.indexOf(p); S.bufs.splice(i, 1);
+  if (!S.bufs.length) { S.view = 'dash'; S.active = null; } else S.active = S.bufs[Math.min(i, S.bufs.length - 1)];
+  dirty();
+}
+function cycleBuf(d) {
+  if (S.bufs.length < 2) { notify('Buffers', 'Only one Buffer open. Open another file to swipe between them.'); return; }
+  const i = S.bufs.indexOf(S.active);
+  S.active = S.bufs[(i + d + S.bufs.length) % S.bufs.length]; dirty();
+}
+function openDrawer(dir) {
+  closeOverlay(); S.drawer = true;
+  if (dir) { S.openDirs.add(dir); S.drawerHi = dir; }
+  dirty();
+}
+function closeDrawer(now) { S.drawer = false; if (now) S.drawerP = 0; dirty(); }
+function openOverlay(o) {
+  if (S.drawer) closeDrawer(true);
+  S.overlay = o; S.q = ''; S.pickTop = 0; kb.value = '';
+  if (o === 'picker' || o === 'cmd') kb.focus({ preventScroll: true });
+  dirty();
+}
+function toggleOverlay(o) { S.overlay === o ? closeOverlay() : openOverlay(o); }
+function closeOverlay() { if (S.overlay) { S.overlay = null; dirty(); } if (document.activeElement === kb) kb.blur(); }
+function runCmd(c) {
+  c = c.trim();
+  if (['q', 'q!', 'qa', 'qa!', 'wq', 'x', 'quit'].includes(c)) return powerOff();
+  if (c === 'plain') return showPlain('cmd');
+  if (c === 'help') return notify('Help', 'Would open help.md with the keymap (#7). Not wired in this prototype.');
+  if (c === 'w') return notify('Error', 'E21: Cannot make changes, \'modifiable\' is off', 'error');
+  if (/^e\s+/.test(c)) return openFile(c.replace(/^e\s+/, ''));
+  if (c) notify('Error', `E492: Not an editor command: ${c}`, 'error');
+}
+function submitKb() {
+  if (S.overlay === 'cmd') { const c = S.q; closeOverlay(); runCmd(c); }
+  else if (S.overlay === 'picker') { const it = searchItems()[0]; closeOverlay(); if (it) it.p === 'cv.pdf' ? dashAct('d') : openFile(it.p, it.line); }
+}
+function scrollBy(n) {
+  if (S.mode !== 'ui') return;
+  if (S.overlay === 'picker') S.pickTop += n;
+  else if (ui() === 'A' && S.drawer) S.drawerTop += n;
+  else if (ui() === 'A' && S.view === 'buf') S.top[S.active] = (S.top[S.active] || 0) + n;
+  else if (ui() === 'B') { const cur = S.stack[S.stack.length - 1]; if (cur.startsWith('file:')) { const p = cur.slice(5); S.top[p] = (S.top[p] || 0) + n; } }
+  dirty();
+}
+
+/* ---------------- Plain View (layout C, and :plain) ---------------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function mdToHtml(md, skipH1) {
+  const lines = md.replace(/^---\n[\s\S]*?\n---\n?/, '').split('\n');
+  let h = '', list = false, code = false, buf = [];
+  const close = () => { if (list) { h += '</ul>'; list = false; } };
+  for (const l of lines) {
+    if (l.startsWith('```')) { if (code) { h += `<pre>${esc(buf.join('\n'))}</pre>`; buf = []; } else close(); code = !code; continue; }
+    if (code) { buf.push(l); continue; }
+    if (l.startsWith('# ')) { close(); if (!skipH1) h += `<h3>${esc(l.slice(2))}</h3>`; continue; }
+    if (l.startsWith('## ')) { close(); h += `<h3>${esc(l.slice(3))}</h3>`; continue; }
+    if (/^\s*- /.test(l)) { if (!list) { h += '<ul>'; list = true; } h += `<li>${esc(l.replace(/^\s*- /, ''))}</li>`; continue; }
+    close();
+    if (l.trim()) h += `<p>${esc(l)}</p>`;
+  }
+  close(); return h;
+}
+function renderPlain() {
+  const f = front('README.md');
+  const top = S.plainFrom === 'cmd'
+    ? `<span>Plain View, opened with <code>:plain</code>.</span><button type="button" data-pv="back">Back to the editor</button>`
+    : `<span>You're on a phone, so this is the Plain View.</span><button type="button" data-pv="editor">Try the editor anyway</button>`;
+  plainEl.innerHTML = `<div class="pv-top">${top}</div>
+    <h1>Franco</h1>
+    <p class="pv-meta">${esc(f.role)} · ${esc(f.location)} · open to work</p>
+    <button type="button" class="pv-cv" data-pv="cv">Download CV</button><span class="pv-msg" id="pvmsg"></span>
+    <h2>Whoami</h2>${mdToHtml(FILES['README.md'], true)}
+    <h2>Projects</h2>${['projects/portfolio.md', 'projects/example.md'].map(p => `<h3>${esc(front(p).name)} · ${esc(front(p).year)}</h3>` + mdToHtml(FILES[p], true)).join('')}
+    <h2>Experience</h2>${['experience/acme.md', 'experience/initech.md'].map(p => `<h3>${esc(front(p).title)} @ ${esc(front(p).company)} · ${esc(front(p).start)} → ${esc(front(p).end)}</h3>` + mdToHtml(FILES[p], true)).join('')}
+    <h2>Timeline</h2>${mdToHtml(FILES['timeline.md'], true)}
+    <h2>Extras</h2>${mdToHtml(FILES['extras.md'], true)}
+    <h2>Skills</h2><pre>${esc(FILES['skills.lua'])}</pre>`;
+  plainEl.scrollTop = 0;
+}
+function showPlain(from) {
+  S.plainFrom = from; S.mode = 'plain'; closeOverlay(); closeDrawer(true);
+  renderPlain(); plainEl.hidden = false; syncStatus(true);
+}
+function hidePlain() { plainEl.hidden = true; S.mode = 'ui'; dirty(); }
+plainEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-pv]'); if (!b) return;
+  if (b.dataset.pv === 'back') hidePlain();
+  else if (b.dataset.pv === 'editor') { S.cEditor = true; resetUI(); hidePlain(); }
+  else if (b.dataset.pv === 'cv') { $('#pvmsg').textContent = 'Would download cv.pdf'; }
+});
+
+/* ---------------- painting the grid to the canvas ---------------- */
+const BOX = { '─': [1, 1, 0, 0], '│': [0, 0, 1, 1], '╭': [0, 1, 0, 1], '╮': [1, 0, 0, 1], '╰': [0, 1, 1, 0], '╯': [1, 0, 1, 0], '├': [0, 1, 1, 1], '┤': [1, 0, 1, 1] };
+const DBL = { '═': 'h', '║': 'v', '╔': [1, 1], '╗': [-1, 1], '╚': [1, -1], '╝': [-1, -1] };
+const BLOCK = { '█': [0, 0, 1, 1], '▀': [0, 0, 1, 0.5], '▄': [0, 0.5, 1, 0.5], '▌': [0, 0, 0.5, 1], '▔': [0, 0, 1, 0.08], '▁': [0, 0.92, 1, 0.08] };
+let curFont = '';
+function cell(c, X, Y, W, Hh, color, bold) {
+  g.fillStyle = C[color];
+  if (BLOCK[c]) { const [a, b, w, h] = BLOCK[c]; g.fillRect(X + a * W, Y + b * Hh, w * W + 0.5, Math.max(1, h * Hh) + 0.5); return; }
+  const t = Math.max(1, Math.round(dpr * Math.min(1, W / (cw * dpr) + 0.25))), cx = X + W / 2, cy = Y + Hh / 2, d = W * 0.17;
+  if (BOX[c]) {
+    const [l, r, u, dn] = BOX[c];
+    if (l) g.fillRect(X, cy - t / 2, W / 2 + t / 2, t);
+    if (r) g.fillRect(cx - t / 2, cy - t / 2, W / 2 + t / 2 + 0.5, t);
+    if (u) g.fillRect(cx - t / 2, Y, t, Hh / 2 + t / 2);
+    if (dn) g.fillRect(cx - t / 2, cy - t / 2, t, Hh / 2 + t / 2 + 0.5);
+    return;
+  }
+  if (DBL[c]) {
+    const k = DBL[c];
+    if (k === 'h') { g.fillRect(X, cy - d - t / 2, W + 0.5, t); g.fillRect(X, cy + d - t / 2, W + 0.5, t); }
+    else if (k === 'v') { g.fillRect(cx - d - t / 2, Y, t, Hh + 0.5); g.fillRect(cx + d - t / 2, Y, t, Hh + 0.5); }
+    else {
+      const [sx, sy] = k, hEdge = sx > 0 ? X + W + 0.5 : X, vEdge = sy > 0 ? Y + Hh + 0.5 : Y;
+      const line = (x1, y1, x2, y2) => g.fillRect(Math.min(x1, x2) - t / 2, Math.min(y1, y2) - t / 2, Math.abs(x2 - x1) + t, Math.abs(y2 - y1) + t);
+      line(cx - sx * d, cy - sy * d, hEdge, cy - sy * d); line(cx + sx * d, cy + sy * d, hEdge, cy + sy * d);
+      line(cx - sx * d, cy - sy * d, cx - sx * d, vEdge); line(cx + sx * d, cy + sy * d, cx + sx * d, vEdge);
+    }
+    return;
+  }
+  const f = bold ? F1 : F0; if (f !== curFont) { g.font = f; curFont = f; }
+  g.fillText(c, X, cy + dpr * 0.5);
+}
+function paint() {
+  const W = cw * dpr, Hh = chh * dpr;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = C[S.screenBg]; g.fillRect(0, 0, src.width, src.height);
+  g.setTransform(1, 0, 0, 1, Math.round(padX * dpr), Math.round(padY * dpr));
+  g.textBaseline = 'middle'; curFont = ''; g.font = F0;
+  for (const s of SPR) s.art.forEach((row, r) => [...row].forEach((c, k) => { if (c !== ' ') cell(c, (s.x + k * s.w) * dpr, (s.y + r * s.h) * dpr, s.w * dpr, s.h * dpr, s.color, false); }));
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const b = BG[y * cols + x];
+    if (b !== 'bg') { g.fillStyle = C[b]; g.fillRect(Math.floor(x * W), Math.floor(y * Hh), Math.ceil(W) + 1, Math.ceil(Hh) + 1); }
+  }
+  g.textBaseline = 'middle'; curFont = ''; g.font = F0;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = y * cols + x, c = CH[i];
+    if (c !== ' ') cell(c, x * W, y * Hh, W, Hh, FG[i], BD[i]);
+  }
+}
+
+/* ---------------- WebGL: shaders adapted from Texture Lab ---------------- */
+const VERT = `#version 300 es
+in vec2 aPosition;
+out vec2 vUv;
+void main() { vUv = aPosition * 0.5 + 0.5; gl_Position = vec4(aPosition, 0.0, 1.0); }`;
+const HEADER = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uInput;
+uniform vec2 uResolution;
+uniform float uTime;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float PI = 3.14159265359;
+float luma(vec3 c) { return dot(c, LUMA); }
+vec3 toLinear(vec3 c) { return pow(max(c, 0.0), vec3(2.2)); }
+vec3 toGamma(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float smootherstep(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+`;
+const FS = {
+copy: `void main() { outColor = vec4(texture(uInput, vUv).rgb, 1.0); }`,
+blur: `
+uniform vec2 uStep;
+uniform float uSigma;
+void main() {
+  float sigma = max(uSigma, 0.001);
+  float radius = min(ceil(sigma * 3.0), 40.0);
+  vec3 sum = texture(uInput, vUv).rgb;
+  float total = 1.0;
+  for (int i = 1; i <= 40; i++) {
+    float x = float(i);
+    if (x > radius) break;
+    float w = exp(-x * x / (2.0 * sigma * sigma));
+    vec2 offset = uStep * x;
+    sum += (texture(uInput, vUv + offset).rgb + texture(uInput, vUv - offset).rgb) * w;
+    total += 2.0 * w;
+  }
+  outColor = vec4(sum / total, 1.0);
+}`,
+bpre: `
+uniform vec2 uTexel;
+uniform float uThreshold;
+uniform float uKnee;
+vec3 tap(vec2 uv) { return toLinear(texture(uInput, uv).rgb); }
+void main() {
+  vec2 uv = vUv;
+  vec3 color = (tap(uv + uTexel * vec2(-1.0, -1.0)) + tap(uv + uTexel * vec2(1.0, -1.0)) + tap(uv + uTexel * vec2(-1.0, 1.0)) + tap(uv + uTexel * vec2(1.0, 1.0))) * 0.25;
+  float bright = max(color.r, max(color.g, color.b));
+  float soft = clamp(bright - uThreshold + uKnee, 0.0, 2.0 * uKnee);
+  soft = soft * soft / (4.0 * uKnee + 1e-5);
+  float contribution = max(soft, bright - uThreshold) / max(bright, 1e-5);
+  outColor = vec4(color * contribution, 1.0);
+}`,
+bdown: `
+uniform vec2 uTexel;
+void main() {
+  vec2 uv = vUv; vec2 t = uTexel;
+  vec3 a = texture(uInput, uv + t * vec2(-2.0, 2.0)).rgb;
+  vec3 b = texture(uInput, uv + t * vec2(0.0, 2.0)).rgb;
+  vec3 c = texture(uInput, uv + t * vec2(2.0, 2.0)).rgb;
+  vec3 d = texture(uInput, uv + t * vec2(-2.0, 0.0)).rgb;
+  vec3 e = texture(uInput, uv).rgb;
+  vec3 f = texture(uInput, uv + t * vec2(2.0, 0.0)).rgb;
+  vec3 g = texture(uInput, uv + t * vec2(-2.0, -2.0)).rgb;
+  vec3 h = texture(uInput, uv + t * vec2(0.0, -2.0)).rgb;
+  vec3 i = texture(uInput, uv + t * vec2(2.0, -2.0)).rgb;
+  vec3 j = texture(uInput, uv + t * vec2(-1.0, 1.0)).rgb;
+  vec3 k = texture(uInput, uv + t * vec2(1.0, 1.0)).rgb;
+  vec3 l = texture(uInput, uv + t * vec2(-1.0, -1.0)).rgb;
+  vec3 m = texture(uInput, uv + t * vec2(1.0, -1.0)).rgb;
+  outColor = vec4(e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125, 1.0);
+}`,
+bup: `
+uniform sampler2D uLower;
+uniform vec2 uTexel;
+uniform float uSpread;
+void main() {
+  vec4 d = vec4(1.0, 1.0, -1.0, 0.0) * uTexel.xyxy;
+  vec3 s = texture(uLower, vUv - d.xy).rgb;
+  s += texture(uLower, vUv - d.wy).rgb * 2.0;
+  s += texture(uLower, vUv - d.zy).rgb;
+  s += texture(uLower, vUv + d.zw).rgb * 2.0;
+  s += texture(uLower, vUv).rgb * 4.0;
+  s += texture(uLower, vUv + d.xw).rgb * 2.0;
+  s += texture(uLower, vUv + d.zy).rgb;
+  s += texture(uLower, vUv + d.wy).rgb * 2.0;
+  s += texture(uLower, vUv + d.xy).rgb;
+  outColor = vec4(texture(uInput, vUv).rgb + s / 16.0 * uSpread, 1.0);
+}`,
+bcomp: `
+uniform sampler2D uBloom;
+uniform sampler2D uSmall;
+uniform float uIntensity;
+uniform vec3 uTint;
+uniform float uLevels;
+void main() {
+  vec3 base = toLinear(texture(uInput, vUv).rgb);
+  vec3 glow = texture(uBloom, vUv).rgb / max(uLevels * 0.55, 1.0);
+  vec3 mean = texture(uSmall, vec2(0.25)).rgb + texture(uSmall, vec2(0.75, 0.25)).rgb;
+  mean += texture(uSmall, vec2(0.25, 0.75)).rgb + texture(uSmall, vec2(0.75)).rgb;
+  float energy = luma(mean * 0.25);
+  glow *= uIntensity * 1.5 / (1.0 + energy * 5.0);
+  vec3 color = 1.0 - (1.0 - base) * exp(-glow * uTint);
+  outColor = vec4(toGamma(color), 1.0);
+}`,
+crt: `
+uniform sampler2D uGlowMap;
+uniform float uCurvature;
+uniform float uLines;
+uniform float uScan;
+uniform float uGlow;
+uniform float uVignette;
+uniform float uFlicker;
+uniform float uRoll;
+uniform float uConvergence;
+uniform float uSeed;
+uniform vec4 uTube;
+uniform float uBright;
+vec2 warp(vec2 uv) {
+  vec2 c = uv * 2.0 - 1.0;
+  vec2 offset = c.yx * c.yx * vec2(0.11, 0.16) * uCurvature;
+  c += c * offset;
+  return c * 0.5 + 0.5;
+}
+void main() {
+  vec2 uv = warp(vUv);
+  vec2 edge = smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), uv) * smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), 1.0 - uv);
+  float inside = edge.x * edge.y;
+  vec2 c = uv * 2.0 - 1.0;
+  vec2 sz = max(uTube.xy, vec2(0.0005));
+  vec2 px = 2.0 / uResolution;
+  float on = (1.0 - smoothstep(sz.x - px.x, sz.x + px.x, abs(c.x))) * (1.0 - smoothstep(sz.y - px.y, sz.y + px.y, abs(c.y)));
+  vec2 suv = clamp(c / sz, -1.0, 1.0) * 0.5 + 0.5;
+  float shift = uConvergence / uResolution.x;
+  vec3 color;
+  color.r = texture(uInput, suv + vec2(shift, 0.0)).r;
+  color.g = texture(uInput, suv).g;
+  color.b = texture(uInput, suv - vec2(shift, 0.0)).b;
+  vec3 linear = toLinear(color);
+  float y = uv.y * uLines;
+  float s = sin(fract(y) * PI);
+  float bright = luma(linear);
+  float beam = pow(s, mix(2.4, 0.7, clamp(bright * 1.6, 0.0, 1.0)));
+  linear *= mix(1.0, beam * 1.55, uScan);
+  linear += toLinear(texture(uGlowMap, suv).rgb) * uGlow;
+  linear = mix(linear, vec3(1.0), uTube.z) * on;
+  vec2 dd = max(abs(c) - sz, 0.0) * vec2(uResolution.x / uResolution.y, 1.0);
+  linear += vec3(0.78, 0.84, 1.0) * exp(-length(dd) * 28.0) * uTube.w * 0.55 * (1.0 - on * 0.5);
+  if (uRoll > 0.0) {
+    float band = fract(uv.y - uTime * 0.11);
+    linear *= 1.0 + smoothstep(0.0, 0.12, band) * smoothstep(0.26, 0.12, band) * uRoll * 0.16;
+  }
+  linear *= 1.0 + (hash11(uSeed) - 0.5) * uFlicker * 0.12;
+  vec2 v = vUv * 2.0 - 1.0;
+  float vig = smootherstep(1.45, 0.35, length(v * vec2(0.92, 1.0)));
+  linear *= mix(1.0, vig, uVignette);
+  outColor = vec4(toGamma(linear * uBright) * inside, 1.0);
+}`,
+plainfx: `
+uniform vec4 uTube;
+uniform float uBright;
+void main() {
+  vec2 c = vUv * 2.0 - 1.0;
+  vec2 sz = max(uTube.xy, vec2(0.0005));
+  float on = step(abs(c.x), sz.x) * step(abs(c.y), sz.y);
+  vec2 suv = clamp(c / sz, -1.0, 1.0) * 0.5 + 0.5;
+  vec3 col = mix(texture(uInput, suv).rgb, vec3(1.0), uTube.z) * on;
+  outColor = vec4(col * uBright, 1.0);
+}`,
+};
+
+let PR = {}, T = {}, srcT = null, FMT = null, time = 0;
+function program(body) {
+  const sh = (type, s) => { const o = gl.createShader(type); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, HEADER + body));
+  gl.bindAttribLocation(p, 0, 'aPosition'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const locs = {};
+  return { p, loc: n => (n in locs ? locs[n] : (locs[n] = gl.getUniformLocation(p, n))) };
+}
+function texture(w, h, internal, format, type) {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+function target(w, h) {
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  const tex = texture(w, h, FMT.internal, gl.RGBA, FMT.type);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+function freeTarget(t) { if (t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); } }
+function setU(prog, name, v) {
+  const l = prog.loc(name); if (l == null) return;
+  if (typeof v === 'number') gl.uniform1f(l, v);
+  else if (v.length === 2) gl.uniform2f(l, v[0], v[1]);
+  else if (v.length === 3) gl.uniform3f(l, v[0], v[1], v[2]);
+  else if (v.length === 4) gl.uniform4f(l, v[0], v[1], v[2], v[3]);
+}
+function pass(prog, o) {
+  gl.useProgram(prog.p);
+  const tg = o.target;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, tg ? tg.fb : null);
+  const w = tg ? tg.w : gl.drawingBufferWidth, h = tg ? tg.h : gl.drawingBufferHeight;
+  gl.viewport(0, 0, w, h);
+  let unit = 0;
+  const bind = (name, t) => { const l = prog.loc(name); if (l == null) return; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.uniform1i(l, unit); unit++; };
+  if (o.input) bind('uInput', o.input);
+  for (const k in o.textures || {}) bind(k, o.textures[k]);
+  setU(prog, 'uResolution', [w, h]); setU(prog, 'uTime', time);
+  for (const k in o.uniforms || {}) setU(prog, k, o.uniforms[k]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+function glInit() {
+  const ext = gl.getExtension('EXT_color_buffer_float');
+  FMT = ext ? { internal: gl.RGBA16F, type: gl.HALF_FLOAT } : { internal: gl.RGBA8, type: gl.UNSIGNED_BYTE };
+  for (const k in FS) PR[k] = program(FS[k]);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+}
+function glAlloc() {
+  for (const k in T) { const v = T[k]; Array.isArray(v) ? v.forEach(freeTarget) : freeTarget(v); }
+  T = {};
+  if (srcT) gl.deleteTexture(srcT.tex);
+  const W = src.width, H = src.height;
+  srcT = { tex: texture(W, H, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE), w: W, h: H };
+  T.bloom = target(W, H);
+  T.h1 = target(W / 2, H / 2); T.h2 = target(W / 2, H / 2); T.h3 = target(W / 2, H / 2);
+  const levels = S.effect === 'lighter' ? 4 : 7;
+  const chain = [target(W / 2, H / 2)];
+  while (chain.length < levels && Math.min(chain[chain.length - 1].w, chain[chain.length - 1].h) > 12) { const l = chain[chain.length - 1]; chain.push(target(l.w / 2, l.h / 2)); }
+  T.chain = chain; T.ups = chain.slice(0, -1).map(l => target(l.w, l.h));
+}
+function renderGL() {
+  if (S.effect === 'off') { pass(PR.plainfx, { input: srcT, uniforms: { uTube: S.tube, uBright: S.bright } }); return; }
+  const W = src.width, H = src.height, th = Math.pow(P.bThreshold, 2.2), chain = T.chain;
+  pass(PR.bpre, { input: srcT, target: chain[0], uniforms: { uTexel: [1 / W, 1 / H], uThreshold: th, uKnee: Math.max(th * 0.5, 0.001) } });
+  for (let i = 1; i < chain.length; i++) pass(PR.bdown, { input: chain[i - 1], target: chain[i], uniforms: { uTexel: [1 / chain[i - 1].w, 1 / chain[i - 1].h] } });
+  let lower = chain[chain.length - 1];
+  for (let i = chain.length - 2; i >= 0; i--) { pass(PR.bup, { input: chain[i], target: T.ups[i], textures: { uLower: lower }, uniforms: { uTexel: [1 / lower.w, 1 / lower.h], uSpread: P.bRadius } }); lower = T.ups[i]; }
+  pass(PR.bcomp, { input: srcT, target: T.bloom, textures: { uBloom: lower, uSmall: chain[chain.length - 1] }, uniforms: { uIntensity: P.bIntensity, uTint: [1, 1, 1], uLevels: chain.length } });
+  pass(PR.copy, { input: T.bloom, target: T.h1 });
+  const sig = 3 * dpr;
+  pass(PR.blur, { input: T.h1, target: T.h2, uniforms: { uStep: [1 / T.h1.w, 0], uSigma: sig } });
+  pass(PR.blur, { input: T.h2, target: T.h3, uniforms: { uStep: [0, 1 / T.h1.h], uSigma: sig } });
+  pass(PR.crt, { input: T.bloom, textures: { uGlowMap: T.h3 }, uniforms: {
+    uCurvature: P.curvature, uLines: H / Math.max(1.5, P.lines * dpr), uScan: P.scan, uGlow: P.glow,
+    uVignette: P.vignette, uFlicker: P.flicker, uRoll: P.roll, uConvergence: P.convergence * dpr, uSeed: Math.floor(time * 30) * 1.7,
+    uTube: S.tube, uBright: S.bright } });
+}
+
+/* ---------------- power-on and power-off curves (#8) ---------------- */
+const easeOut = x => 1 - Math.pow(1 - x, 3), easeIn = x => x * x * x;
+const LINE = 0.006;
+function tubeOn(p) {
+  if (p < 0.45) { const q = p / 0.45; return [Math.max(0.004, easeOut(q)), LINE, 1, 1]; }
+  const q = (p - 0.45) / 0.55; return [1, LINE + (1 - LINE) * easeOut(q), 1 - easeOut(q), 1 - q];
+}
+const OFF_D = 0.95;
+function tubeOff(p) {
+  const dot = LINE * (src.height / Math.max(1, src.width));
+  if (p < 0.38) { const q = p / 0.38; return [[1, 1 - (1 - LINE) * easeIn(q), q, q], 1]; }
+  if (p < 0.68) { const q = (p - 0.38) / 0.3; return [[1 - (1 - dot) * easeOut(q), LINE, 1, 1], 1]; }
+  const q = (p - 0.68) / 0.32, k = 1 - q * 0.6; return [[dot * k, LINE * k, 1, 1], 1 - easeIn(q)];
+}
+
+/* ---------------- flow ---------------- */
+function startBoot() {
+  plainEl.hidden = true; S.cEditor = false; resetUI();
+  S.plan = makePlan(); S.mode = 'boot'; S.t0 = performance.now(); S.seg = S.plan.segs[0]; S.segP = 0;
+  dirty();
+}
+function finishBoot() {
+  if (S.layout === 'C' && !S.cEditor) { showPlain('phone'); return; }
+  S.mode = 'ui'; dirty();
+}
+function powerOff() { closeOverlay(); closeDrawer(true); S.notes = []; S.mode = 'offanim'; S.offAt = performance.now(); dirty(); }
+function powerOn() { startBoot(); }
+function setLayout(L) {
+  S.layout = L; S.cEditor = false;
+  if (S.mode === 'boot' || S.mode === 'off' || S.mode === 'offanim' || S.mode === 'black') { syncAll(); return; }
+  resetUI();
+  if (L === 'C') showPlain('phone'); else { plainEl.hidden = true; S.mode = 'ui'; }
+  syncAll(); dirty();
+}
+
+/* ---------------- layout and loop ---------------- */
+let needsDraw = true;
+const dirty = () => { needsDraw = true; };
+function wantSmall() { return S.fit === 'shrink' && S.mode === 'boot' && S.seg && S.seg.id !== 'dash'; }
+function layout() {
+  cssW = phone.clientWidth; cssH = phone.clientHeight; if (!cssW || !cssH) return;
+  const dev = window.devicePixelRatio || 1;
+  dpr = S.effect === 'lighter' ? 1 : Math.min(2, dev);
+  small = wantSmall();
+  fontPx = small ? Math.max(6, cssW / ((74 + 2 * PM) * ratio)) : 13;
+  src.width = Math.round(cssW * dpr); src.height = Math.round(cssH * dpr);
+  if (glOk) { view.width = src.width; view.height = src.height; }
+  F0 = `400 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  F1 = `700 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  padX = 0; padY = 0;
+  inW = cssW - 2 * padX; inH = cssH - 2 * padY;
+  g.font = F0;
+  const m = g.measureText('M').width / dpr, lh = Math.round(fontPx * 1.45);
+  cols = Math.max(20, Math.floor(inW / m)); rows = Math.max(16, Math.floor(inH / lh));
+  cw = inW / cols; chh = inH / rows;
+  gridInit();
+  if (glOk) glAlloc();
+  needsDraw = true;
+}
+let lastGL = 0, frames = 0, fpsT = 0, fps = 0;
+function build() {
+  clearGrid();
+  if (S.mode === 'black') { S.screenBg = 'black'; return; }
+  if (S.mode === 'off') { S.screenBg = 'black'; drawOff(); return; }
+  if (S.mode === 'boot') {
+    const id = S.seg.id, p = S.segP;
+    S.screenBg = id === 'dash' ? 'bg' : 'crust';
+    if (id === 'bios') drawBios(p);
+    else if (id === 'banner') drawBanner(p);
+    else if (id === 'login') drawLogin(p, false);
+    else if (id === 'nvim') drawNvim(p);
+    if (id !== 'dash' && id !== 'power') drawSkipHint();
+    return;
+  }
+  S.screenBg = 'bg';
+  ui() === 'A' ? buildA() : buildB();
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  time = now / 1000;
+  if (!cols) return;
+  if (S.notes.length && S.notes[0].until < now) { S.notes = S.notes.filter(n => n.until >= now); needsDraw = true; }
+  let tube = [1, 1, 0, 0], bright = 1;
+  if (S.mode === 'boot') {
+    const t = (now - S.t0) / 1000;
+    if (t >= S.plan.total) finishBoot();
+    else {
+      S.seg = S.plan.segs.find(s => t < s.start + s.dur) || S.plan.segs[S.plan.segs.length - 1];
+      S.segP = clamp01((t - S.seg.start) / S.seg.dur);
+      if (S.seg.id === 'power') tube = tubeOn(S.segP);
+    }
+    needsDraw = true;
+  } else if (S.mode === 'offanim') {
+    const p = (now - S.offAt) / 1000 / OFF_D;
+    if (p >= 1) { S.mode = 'off'; needsDraw = true; } else [tube, bright] = tubeOff(p);
+  } else if (S.mode === 'black') bright = 0;
+  if (wantSmall() !== small) layout();
+  // drawer slide
+  const tgt = S.drawer ? 1 : 0;
+  if (S.drawerP !== tgt) { S.drawerP = clamp01(S.drawerP + (tgt ? 1 : -1) * 16 / 170); needsDraw = true; }
+  if (S.mode === 'off' || S.overlay === 'cmd' || S.overlay === 'picker') needsDraw = true; // blinking cursors
+  S.tube = tube; S.bright = bright;
+  if (S.mode === 'plain') { syncStatus(); return; }
+  const interval = S.effect === 'lighter' ? 1000 / 30 - 2 : 0;
+  if (now - lastGL < interval) return;
+  lastGL = now; frames++;
+  if (now - fpsT > 1000) { fps = Math.round(frames * 1000 / (now - fpsT)); frames = 0; fpsT = now; syncStatus(); }
+  let upload = false;
+  if (needsDraw) { build(); paint(); needsDraw = false; upload = true; }
+  if (glOk) {
+    if (upload) { gl.bindTexture(gl.TEXTURE_2D, srcT.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src); }
+    renderGL();
+  } else {
+    view.style.transform = `scale(${Math.max(tube[0], 0.003)}, ${Math.max(tube[1], 0.004)})`;
+    view.style.filter = `brightness(${(1 + tube[2] * 4) * bright})`;
+  }
+}
+
+/* ---------------- input: taps, drags, swipes ---------------- */
+function cellAt(e) {
+  const r = view.getBoundingClientRect();
+  let u = (e.clientX - r.left) / r.width, v = 1 - (e.clientY - r.top) / r.height;
+  if (glOk && S.effect !== 'off') {
+    let cx = u * 2 - 1, cy = v * 2 - 1;
+    const ox = cy * cy * 0.11 * P.curvature, oy = cx * cx * 0.16 * P.curvature;
+    cx += cx * ox; cy += cy * oy; u = cx * 0.5 + 0.5; v = cy * 0.5 + 0.5;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+  }
+  return { col: Math.floor((u * cssW - padX) / cw), row: Math.floor(((1 - v) * cssH - padY) / chh) };
+}
+function hit(c) { if (!c) return null; for (let i = CLK.length - 1; i >= 0; i--) { const k = CLK[i]; if (c.row >= k.y0 && c.row <= k.y1 && c.col >= k.x0 && c.col < k.x1) return k; } return null; }
+function interrupt() {
+  if (S.mode === 'boot') { finishBoot(); return true; }
+  if (S.mode === 'off') { powerOn(); return true; }
+  if (S.mode === 'offanim' || S.mode === 'black') return true;
+  return false;
+}
+let ptr = null, suppressClick = false;
+function bindInput() {
+  view.addEventListener('pointerdown', e => {
+    ptr = { x: e.clientX, y: e.clientY, ly: e.clientY, mode: null, acc: 0 };
+    try { view.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  view.addEventListener('pointermove', e => {
+    if (!ptr) return;
+    const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y;
+    if (!ptr.mode) { if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) ptr.mode = 'v'; else if (Math.abs(dx) > 14) ptr.mode = 'h'; }
+    if (ptr.mode === 'v') {
+      ptr.acc += (ptr.ly - e.clientY) / chh; ptr.ly = e.clientY;
+      const n = Math.trunc(ptr.acc); if (n) { ptr.acc -= n; scrollBy(n); }
+    }
+  });
+  const end = e => {
+    if (!ptr) return;
+    const dx = e.clientX - ptr.x;
+    suppressClick = !!ptr.mode;
+    if (ptr.mode === 'h' && Math.abs(dx) > 50 && S.mode === 'ui' && ui() === 'A' && S.view === 'buf' && !S.drawer && !S.overlay) cycleBuf(dx < 0 ? 1 : -1);
+    else if (ptr.mode === 'h' && dx > 50 && S.mode === 'ui' && ui() === 'A' && S.view === 'dash' && !S.overlay) openDrawer();
+    else if (ptr.mode === 'h' && dx < -50 && S.drawer) closeDrawer();
+    ptr = null;
+  };
+  view.addEventListener('pointerup', end);
+  view.addEventListener('pointercancel', () => { ptr = null; });
+  view.addEventListener('click', e => {
+    if (suppressClick) { suppressClick = false; return; }
+    if (document.body.classList.contains('sheet')) { document.body.classList.remove('sheet'); $('#gear').setAttribute('aria-expanded', false); return; }
+    if (interrupt()) return;
+    const k = hit(cellAt(e)); if (k) k.act();
+  });
+  view.addEventListener('wheel', e => { e.preventDefault(); scrollBy(Math.sign(e.deltaY) * 2); }, { passive: false });
+  kb.addEventListener('input', () => { S.q = kb.value; S.pickTop = 0; dirty(); });
+  kb.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitKb(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
+    else if (e.key === 'Backspace' && !kb.value && S.overlay === 'cmd') { e.preventDefault(); closeOverlay(); }
+  });
+  window.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t === kb || t.closest?.('input, textarea, select')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (S.mode === 'ui' && ui() === 'A' && S.view === 'buf') { e.preventDefault(); cycleBuf(e.key === 'ArrowLeft' ? -1 : 1); return; }
+      e.preventDefault(); cycleLayout(e.key === 'ArrowLeft' ? -1 : 1); return;
+    }
+    if (['Shift', 'CapsLock', 'Tab'].includes(e.key) || S.mode === 'plain') return;
+    if (t !== view && t !== document.body && t !== document.documentElement) return;
+    e.preventDefault();
+    if (interrupt()) return;
+    if (S.mode !== 'ui') return;
+    if (e.key === 'Escape') return back();
+    if (e.key === ':' && ui() === 'A') return openOverlay('cmd');
+    if (e.key === ' ' && ui() === 'A') return toggleOverlay('keys');
+    if (e.key === '/') return openOverlay('picker');
+    if (e.key === 'j' || e.key === 'ArrowDown') return scrollBy(1);
+    if (e.key === 'k' || e.key === 'ArrowUp') return scrollBy(-1);
+    if (S.overlay === 'keys' && e.key === 'q') { closeOverlay(); return powerOff(); }
+    if ((S.view === 'dash' && ui() === 'A') || (ui() === 'B' && S.stack.length === 1) || S.overlay === 'keys') {
+      if ('wpecds'.includes(e.key)) { closeOverlay(); return dashAct(e.key); }
+    }
+  });
+}
+
+/* ---------------- page controls ---------------- */
+function cycleLayout(d) { setLayout(LAYOUTS[(LAYOUTS.indexOf(S.layout) + d + LAYOUTS.length) % LAYOUTS.length]); }
+$('#prev').addEventListener('click', () => cycleLayout(-1));
+$('#next').addEventListener('click', () => cycleLayout(1));
+$('#gear').addEventListener('click', () => { const on = document.body.classList.toggle('sheet'); $('#gear').setAttribute('aria-expanded', on); });
+$('#replay').addEventListener('click', () => { document.body.classList.remove('sheet'); $('#gear').setAttribute('aria-expanded', false); startBoot(); });
+const SEGS = [['effectSeg', 'effect'], ['fitSeg', 'fit'], ['pwSeg', 'pw']];
+for (const [id, key] of SEGS) $('#' + id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S[key] = key === 'pw' ? +b.dataset.v : b.dataset.v;
+  if (key === 'pw') phone.style.setProperty('--pw', S.pw + 'px');
+  if (key === 'effect') layout();
+  if (key === 'fit' && S.mode !== 'boot') startBoot();
+  syncAll();
+});
+function syncStatus(force) {
+  const where = S.mode === 'plain' ? 'Plain View (real HTML)' : S.mode === 'boot' ? 'boot: ' + S.seg.id : S.mode === 'ui' ? (ui() === 'A' ? (S.drawer ? 'Files drawer' : S.overlay || S.view) : S.stack[S.stack.length - 1]) : S.mode;
+  const fx = S.mode === 'plain' ? 'canvas paused' : `effect ${ENAME[S.effect]} · <em>${fps} fps</em> · ${src.width}×${src.height}px`;
+  $('#status').innerHTML = `<em>${S.layout}</em> ${LNAME[S.layout]} · ${where}<br>${fx} · ${cols}×${rows} cells`;
+  $('#fxline').textContent = S.mode === 'plain' ? 'Right now: Plain View, so the canvas is paused.' : `Right now: ${fps} frames per second, ${src.width}×${src.height} pixels drawn, ${cols}×${rows} characters.`;
+}
+function syncPick() {
+  const dev = narrowMQ.matches ? `a phone (${Math.round(cssW)}×${Math.round(cssH)} css px)` : `the desktop frame (${S.pw}px wide)`;
+  $('#pick').textContent = `#10 Mobile layout prototype
+Layout: ${S.layout}) ${LNAME[S.layout]}
+Screen Effect on phones: ${ENAME[S.effect]}
+Self-test on narrow Screens: ${FNAME[S.fit]}
+Tried on: ${dev}
+Notes: `;
+}
+function syncAll() {
+  for (const [id, key] of SEGS) document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v) === String(S[key])));
+  $('#lbl').innerHTML = `<b>${S.layout}</b>${LNAME[S.layout]}`;
+  $('#desc').innerHTML = LDESC[S.layout];
+  $('#effectHint').textContent = EHINT[S.effect];
+  syncPick(); syncStatus();
+}
+$('#copy').addEventListener('click', () => {
+  const text = $('#pick').textContent, btn = $('#copy');
+  const ok = () => { btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = 'Copy pick'), 1500); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('#pick')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected, now copy'; };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch (_) { fallback(); }
+});
+
+/* ---------------- start ---------------- */
+let glOk = !!gl;
+function useNoGL() { glOk = false; src.className = view.className; src.setAttribute('aria-label', view.getAttribute('aria-label')); src.style.touchAction = 'none'; view.replaceWith(src); view = src; }
+async function start() {
+  try { await Promise.race([Promise.all([document.fonts.load('400 14px "JetBrains Mono"'), document.fonts.load('700 14px "JetBrains Mono"')]), new Promise(r => setTimeout(r, 2500))]); } catch (_) {}
+  g.font = '400 100px "JetBrains Mono", ui-monospace, Menlo, monospace'; ratio = g.measureText('M').width / 100 || 0.6;
+  if (glOk) { try { glInit(); } catch (err) { console.error(err); $('#nogl').textContent = 'The shaders failed to compile here, so the CRT effect is off.'; $('#nogl').hidden = false; useNoGL(); } }
+  else { $('#nogl').hidden = false; useNoGL(); }
+  MS = performance.now().toFixed(2);
+  bindInput(); layout(); syncAll();
+  new ResizeObserver(() => { if (phone.clientWidth !== cssW || phone.clientHeight !== cssH) { layout(); syncPick(); } }).observe(phone);
+  requestAnimationFrame(frame);
+  setTimeout(startBoot, 350);
+}
+start();
+})();
+</script>
