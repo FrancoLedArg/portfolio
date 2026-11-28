@@ -9,7 +9,7 @@ The whole browser viewport, presented as the glass of an old CRT monitor. There 
 _Avoid_: Monitor, frame, canvas
 
 **Screen Effect**:
-The CRT look laid over everything on the **Screen**: curvature, scanlines, glow, bloom and vignette.
+The CRT look laid over everything on the **Screen**: curved glass, scanlines, glow, bloom, vignette, a slow rolling band and a faint flicker.
 _Avoid_: Filter, shader, texture
 
 **Boot Sequence**:
