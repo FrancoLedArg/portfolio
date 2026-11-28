@@ -13,8 +13,16 @@ The CRT look laid over everything on the **Screen**: curved glass, scanlines, gl
 _Avoid_: Filter, shader, texture
 
 **Boot Sequence**:
-The ASCII intro that plays on the **Screen** before the **Dashboard**, styled like an old machine powering on.
+The intro that plays on the **Screen** before the **Dashboard**, styled like an old machine powering on: the CRT power-on, the **Self-test**, a name banner, a login that types itself, and `nvim`.
 _Avoid_: Intro, loader, splash
+
+**Self-test**:
+The joke BIOS check in the **Boot Sequence** that "loads" Franco as if he were a machine, one line per trait, ending with `Mounting ~/franco`.
+_Avoid_: BIOS screen, POST, boot log
+
+**Power-off**:
+The CRT shutdown played when the visitor quits: the picture collapses to a line, then a dot, then the **Screen** waits for a key to play the **Boot Sequence** again.
+_Avoid_: Quit animation, shutdown, exit
 
 **Plain View**:
 The same portfolio content without the **Screen Effect** or the editor UI, readable by recruiters, screen readers and crawlers.
