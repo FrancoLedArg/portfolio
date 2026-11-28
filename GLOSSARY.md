@@ -25,7 +25,7 @@ The CRT shutdown played when the visitor quits: the picture collapses to a line,
 _Avoid_: Quit animation, shutdown, exit
 
 **Plain View**:
-The same portfolio content without the **Screen Effect** or the editor UI, readable by recruiters, screen readers and crawlers.
+All the portfolio content as one plain text page, without the **Screen Effect** or the editor UI, readable by recruiters, screen readers and crawlers. It is built into the same page as the **Screen** (`/` and `/es`), not a separate address: hidden while the Screen runs, shown with JavaScript off or after `:plain`.
 _Avoid_: Fallback, lite mode, accessible version
 
 ## The editor UI
