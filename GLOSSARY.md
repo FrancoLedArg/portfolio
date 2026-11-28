@@ -31,7 +31,7 @@ _Avoid_: Fallback, lite mode, accessible version
 ## The editor UI
 
 **Dashboard**:
-The start screen shown after the **Boot Sequence**: a big ASCII logo, a menu of single-key entries and a footer line, modelled on LazyVim's own start screen.
+The start screen shown after the **Boot Sequence**: the FRANCO block logo (the only ASCII art on the site, shared with the Boot Sequence banner), a menu of single-key entries and a footer line, modelled on LazyVim's own start screen.
 _Avoid_: Splash, home, landing, welcome screen
 
 **Editor**:
@@ -73,7 +73,7 @@ _Avoid_: Toast, alert, popup
 ## Portfolio content
 
 **Whoami**:
-The identity content: name, role, location, availability, contact, skills and an ASCII portrait.
+The identity content: name, role, location, availability, contact and skills. Text only: no portrait or picture of any kind.
 _Avoid_: About, bio, profile
 
 **Project**:
