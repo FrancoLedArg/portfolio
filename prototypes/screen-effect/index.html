@@ -1,0 +1,1150 @@
+<title>Screen Effect Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a workbench. Effect switches on top, the Screen in the middle, keys, tuning and your pick underneath. Dark only, like the CRT it previews. */
+:root {
+  --bg: #111219;
+  --panel: #191b25;
+  --line: #2b2e3e;
+  --fg: #dde1f0;
+  --muted: #8d92ab;
+  --accent: #f5a97f;
+  --accent-ink: #1d1a1a;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+h1 { font: 600 1.6rem/1.2 var(--mono); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 76ch; }
+.lede b { color: var(--fg); font-weight: 500; }
+.eyebrow { font: 500 0.72rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 10px; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.82rem; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 0.82rem/1 var(--sans); color: var(--muted); background: none; border: 0; padding: 8px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--fg); }
+.seg button:focus-visible, .btn:focus-visible, .chk input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+.chk { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--fg); }
+.chk input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.fps { margin-left: auto; font: 0.78rem/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.scr { position: relative; width: 100%; height: 520px; background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px #000, 0 30px 80px -30px #000; }
+.scr canvas { display: block; width: 100%; height: 100%; outline: none; cursor: default; }
+.scr canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.focus-hint { position: absolute; z-index: 40; left: 50%; bottom: 10px; transform: translateX(-50%); font: 500 11.5px/1 var(--sans); color: #fff; background: rgba(0,0,0,.65); padding: 6px 10px; border-radius: 99px; pointer-events: none; transition: opacity .2s; white-space: nowrap; }
+.scr:focus-within .focus-hint { opacity: 0; }
+.nogl { position: absolute; z-index: 41; left: 12px; top: 12px; right: 12px; font: 500 12.5px/1.4 var(--sans); color: #fff; background: rgba(160,40,40,.85); padding: 8px 12px; border-radius: 8px; }
+
+/* the #2 mockup's CSS overlay, for comparison */
+.fx { position: absolute; inset: 0; pointer-events: none; z-index: 30; display: none; }
+.scr.css .fx { display: block; }
+.fx.scan { background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.28) 2px 3px); }
+.fx.vig { background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 60%, rgba(0,0,0,.55) 100%); box-shadow: inset 0 0 70px rgba(0,0,0,.7); }
+.fx.roll { background: linear-gradient(to bottom, transparent, rgba(255,255,255,.035) 45%, rgba(255,255,255,.05) 50%, transparent); height: 22%; inset: auto 0 auto 0; animation: roll 7s linear infinite; }
+.scr.css canvas { animation: flick 4s steps(1) infinite; }
+.scr.still .fx.roll, .scr.still canvas { animation: none; }
+.scr.still .fx.roll { display: none; }
+@keyframes roll { from { top: -25%; } to { top: 105%; } }
+@keyframes flick { 0%, 100% { opacity: 1; } 47% { opacity: .96; } 48% { opacity: 1; } 81% { opacity: .975; } 82% { opacity: 1; } }
+
+.below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 980px) { .below { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .below .tune { grid-column: 1 / -1; grid-row: 1; } }
+@media (max-width: 640px) { .below { grid-template-columns: minmax(0, 1fr); } }
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px 18px; min-width: 0; }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; font-size: 0.88rem; margin: 0; }
+.keys dt { font-family: var(--mono); color: var(--accent); font-size: 0.82rem; padding-top: 1px; }
+.keys dd { margin: 0; }
+.look { margin: 14px 0 0; padding-left: 18px; font-size: 0.86rem; color: var(--fg); display: grid; gap: 4px; }
+.look li::marker { color: var(--accent); }
+.sliders { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 18px; }
+.grp { grid-column: 1 / -1; font: 500 0.7rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-top: 6px; }
+.sl { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 0.82rem; }
+.sl output { font: 0.78rem/1.4 var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.sl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.tune-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+pre.pick { margin: 0 0 12px; font: 0.8rem/1.6 var(--mono); white-space: pre-wrap; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; }
+.btn { font: 600 0.85rem/1 var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 7px; padding: 9px 14px; cursor: pointer; }
+.btn.ghost { color: var(--fg); background: transparent; border: 1px solid var(--line); }
+.small { color: var(--muted); font-size: 0.8rem; margin: 10px 0 0; }
+code { font-family: var(--mono); font-size: 0.86em; color: var(--fg); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span>~/</span>franco · Screen Effect</h1>
+    <p class="lede">Prototype for <b>issue #3</b>. Here the editor is painted onto a canvas as a character grid, then run through the <b>bloom</b> and <b>CRT</b> shaders ported from Texture Lab, using the values from your <code>style.json</code>. Flip <b>Effect</b> to compare it with the CSS overlay from the #2 mockup.</p>
+  </header>
+
+  <div class="bar">
+    <div class="ctl">Effect
+      <div class="seg" id="effectSeg">
+        <button type="button" data-v="shader">Shader (Texture Lab)</button>
+        <button type="button" data-v="css">CSS overlay (#2)</button>
+        <button type="button" data-v="off">Off</button>
+      </div>
+    </div>
+    <div class="ctl">ASCII
+      <div class="seg" id="asciiSeg">
+        <button type="button" data-v="hand">Hand-made text art</button>
+        <button type="button" data-v="live">Live ASCII portrait</button>
+        <button type="button" data-v="full">ASCII over whole Screen</button>
+      </div>
+    </div>
+    <div class="ctl">Colors (#4)
+      <div class="seg" id="schemeSeg">
+        <button type="button" data-v="macchiato">Catppuccin</button>
+        <button type="button" data-v="phosphor">Green phosphor</button>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="reduce"> Reduce motion</label>
+    <span class="fps" id="fps">– fps</span>
+  </div>
+
+  <div class="scr" id="scr">
+    <canvas id="gl" tabindex="0" aria-label="Portfolio Screen prototype with the CRT effect. Click to use the keyboard."></canvas>
+    <div class="fx scan"></div><div class="fx roll"></div><div class="fx vig"></div>
+    <div class="focus-hint">Click the Screen to use the keyboard</div>
+    <div class="nogl" id="nogl" hidden>This browser has no WebGL2, so only the CSS overlay and Off can be shown.</div>
+  </div>
+
+  <div class="below">
+    <div class="card">
+      <p class="eyebrow">Keys (after clicking the Screen)</p>
+      <dl class="keys">
+        <dt>w p e c t</dt><dd>Dashboard: whoami, projects, experience, contact, timeline</dd>
+        <dt>click</dt><dd>Explorer files, tabs, menu entries and lines</dd>
+        <dt>j k / gg G</dt><dd>Move the cursor, jump to top or bottom</dd>
+        <dt>wheel</dt><dd>Scroll the buffer</dd>
+        <dt>H L</dt><dd>Previous and next buffer</dd>
+        <dt>yy</dt><dd>Copy the current line (instead of drag-selecting)</dd>
+        <dt>e</dt><dd>Show or hide the Explorer</dd>
+        <dt>q</dt><dd>Back to the Dashboard</dd>
+      </dl>
+      <ul class="look">
+        <li>Is small text still easy to read with the glow?</li>
+        <li>Hover items near the curved edges. The highlight should land exactly under the mouse.</li>
+        <li>Open <code>README.md</code> to see the portrait in each ASCII mode.</li>
+      </ul>
+    </div>
+    <div class="card tune">
+      <p class="eyebrow">Tune the shader</p>
+      <div class="sliders" id="sliders"></div>
+      <div class="tune-foot">
+        <button type="button" class="btn ghost" id="reset">Reset to style.json</button>
+        <span class="small" style="margin:0">Starts at your Texture Lab export values.</span>
+      </div>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Your pick</p>
+      <pre class="pick" id="pick"></pre>
+      <button type="button" class="btn" id="copy">Copy pick</button>
+      <p class="small">Paste it back in the chat. File content is example text. The live portrait is a placeholder silhouette until there's a photo. Shaders adapted from React Bits Texture Lab, © 2026 David Haz, MIT + Commons Clause.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+ * Throwaway prototype for FrancoLedArg/portfolio#3.
+ * The CRT, bloom and ASCII shaders are adapted from React Bits Texture Lab
+ * (src/tools/texture-lab/effects/{crt,bloom,ascii}.js and engine/{glsl,blur}.js).
+ * Copyright (c) 2026 David Haz. MIT + Commons Clause License Condition v1.0:
+ * permission to use, copy, modify, merge, publish and distribute as part of an
+ * application, website or product; the components and tools may not be sold,
+ * sublicensed or redistributed on their own, alone, in a bundle or as a ported version.
+ */
+(() => {
+const $ = s => document.querySelector(s);
+const scrEl = $('#scr');
+let view = $('#gl');
+const gl = view.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+const src = document.createElement('canvas');
+const g = src.getContext('2d');
+const T0 = performance.now();
+
+/* ---------------- state ---------------- */
+const DEFAULTS = { curvature: 0.18, lines: 3.2, scan: 0.35, glow: 0.25, convergence: 0.8, vignette: 0.45, flicker: 0.15, roll: 0.25,
+  bThreshold: 0.25, bIntensity: 0.9, bRadius: 0.75, aSize: 8, aContrast: 1.35, aFlicker: 0.35 };
+const P = { ...DEFAULTS };
+const S = {
+  effect: gl ? 'shader' : 'css', ascii: 'hand', scheme: 'macchiato',
+  reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  view: 'dashboard', buffers: [], active: null, cursor: {}, scroll: {}, collapsed: new Set(), expOpen: true,
+  notes: [], hover: null, gPend: false, yPend: false,
+};
+const SCHEMES = {
+  macchiato: { bg: '#24273a', cl: '#2d3047', mantle: '#1e2030', crust: '#181926', s0: '#363a4f', s1: '#494d64', ov0: '#6e738d', ov2: '#939ab7', sub: '#a5adcb', text: '#cad3f5',
+    blue: '#8aadf4', green: '#a6da95', yellow: '#eed49f', peach: '#f5a97f', red: '#ed8796', mauve: '#c6a0f6', teal: '#8bd5ca', lav: '#b7bdf8', pink: '#f5bde6', ink: '#b7bdf8', tint: '#ffffff' },
+  phosphor: { bg: '#050806', cl: '#0a140d', mantle: '#070c09', crust: '#030503', s0: '#0e1c13', s1: '#183223', ov0: '#2d6643', ov2: '#4e9a69', sub: '#6fcf8f', text: '#8dffb0',
+    blue: '#8dffb0', green: '#6fdc93', yellow: '#b8ffcf', peach: '#c8ffd9', red: '#a8ffc4', mauve: '#9dffbc', teal: '#7ef0a3', lav: '#8dffb0', pink: '#b0ffc8', ink: '#8dffb0', tint: '#8dffb0' },
+};
+
+/* ---------------- content ---------------- */
+const BT = '```';
+const FILES = {
+'README.md': `---
+name: Franco
+role: <role>
+location: <city, country>
+available: true
+cv: cv.pdf
+---
+
+# Franco
+
+${BT}
+          ▄▄▄▓▓▓▓▓▓▓▄▄▄
+       ▄▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▄
+      ▓▓▓▓▀▀░░░░░░░░░▀▀▓▓▓
+     ▓▓▓░░░░░░░░░░░░░░░░░▓▓
+     ▓▓░░░▄▄▄░░░░░░▄▄▄░░░▓▓
+     ▓▓░░░▀▀▀░░░░░░▀▀▀░░░▓▓
+      ▓░░░░░░░░░▄░░░░░░░░▓
+       ▓░░░░░░░▀▀▀░░░░░░▓
+        ▀▓░░░░▀▀▀▀▀░░░░▓▀
+          ▀▓▓▄▄▄▄▄▄▄▓▓▀
+       ▄▄▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▄▄
+    ▄▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▄
+${BT}
+
+<One or two lines: who you are and what you like to build.>
+
+## Contact
+- email     <you@example.com>
+- github    <github.com/you>
+- linkedin  <linkedin.com/in/you>
+
+## Status
+- open to work: yes`,
+'experience/acme.md': `---
+company: Acme
+title: <title>
+start: 2024-03
+end: present
+current: true
+stack: [typescript, react, node]
+---
+
+# <title> @ Acme
+
+<What the team does, in one line.>
+
+## What I did
+- <Shipped X, which made Y possible>
+- <Owned Z end to end>
+- <A number that shows the impact>`,
+'experience/initech.md': `---
+company: Initech
+title: <title>
+start: 2022-01
+end: 2024-02
+current: false
+stack: [javascript, vue, postgres]
+---
+
+# <title> @ Initech
+
+<What the team does, in one line.>
+
+## What I did
+- <Thing you are proud of>
+- <Thing you learned>`,
+'projects/portfolio.md': `---
+name: portfolio
+year: 2026
+stack: [astro, react, webgl]
+status: in progress
+---
+
+# portfolio
+
+This site: a CRT Screen running a LazyVim-style editor.
+Content lives in Markdown with typed frontmatter.
+
+## Highlights
+- Boot Sequence and CRT power-off
+- vim keys, plus mouse and touch
+- Plain View for recruiters and crawlers
+- llms.txt and a .md URL for every file`,
+'projects/example.md': `---
+name: <project>
+year: <yyyy>
+stack: [<tech>, <tech>]
+repo: <github.com/you/project>
+---
+
+# <project>
+
+<What it does and why you built it.>
+
+${BT}
+  [ client ] ───► [ api ] ───► [ db ]
+                     │
+                     └──► [ queue ]
+${BT}
+
+## What was hard
+- <A problem and how you solved it>`,
+'timeline.md': `# timeline
+
+Milestones, newest first.
+
+2026-11   ● Started this portfolio
+<yyyy-mm> ● <Certification>
+<yyyy-mm> ● <Talk or meetup>
+<yyyy>    ● <Degree>, <school>`,
+'extras.md': `# extras
+
+Side quests and ongoing tinkering.
+
+- <Hobby>: <one line about it>
+- <Something you build for fun>
+- Neovim config, forever unfinished`,
+'skills.lua': `-- skills, written as a LazyVim plugin spec
+return {
+  { "typescript", version = "5.x", lazy = false },
+  { "react", version = "19", dependencies = { "typescript" } },
+  { "astro", version = "5", event = "VeryLazy" },
+  { "node", version = "22" },
+  { "git", opts = { daily = true } },
+  -- <add your real skills here>
+}`,
+};
+const TREE = [
+  { dir: 'experience', kids: ['acme.md', 'initech.md'] },
+  { dir: 'projects', kids: ['example.md', 'portfolio.md'] },
+  'README.md', 'cv.pdf', 'extras.md', 'skills.lua', 'timeline.md',
+];
+const ICON = p => p.endsWith('.lua') ? '☾' : p.endsWith('.pdf') ? '▤' : '≡';
+const readmeLines = FILES['README.md'].split('\n');
+const PSTART = readmeLines.indexOf(BT), PEND = readmeLines.indexOf(BT, PSTART + 1);
+const PW = 30; // portrait width in cells
+
+/* ---------------- highlighting ---------------- */
+const ph = (s, c, b) => s.split(/(<[^>]*>)/).filter(Boolean).map(p => /^<.*>$/.test(p) ? [p, 'pink', false] : [p, c, b]);
+function hlMd(text) {
+  let fm = false, fence = false;
+  return text.split('\n').map((l, i) => {
+    if (i === 0 && l === '---') { fm = true; return [[l, 'ov2']]; }
+    if (fm) {
+      if (l === '---') { fm = false; return [[l, 'ov2']]; }
+      const m = l.match(/^([\w-]+):\s?(.*)$/);
+      if (!m) return ph(l, 'text');
+      const v = m[2]; let vs;
+      if (/^\[.*\]$/.test(v)) vs = [['[', 'ov2'], ...v.slice(1, -1).split(',').flatMap((x, j) => (j ? [[',', 'ov2']] : []).concat(ph(x, 'green'))), [']', 'ov2']];
+      else if (/^(true|false|present|[\d-]+)$/.test(v)) vs = [[v, 'peach']];
+      else vs = ph(v, 'green');
+      return [[m[1], 'blue'], [':', 'ov2'], [' ', 'text'], ...vs];
+    }
+    if (l.startsWith(BT)) { fence = !fence; return [[l, 'ov2']]; }
+    if (fence) return [[l, 'lav']];
+    const h = l.match(/^(#{1,3}) /);
+    if (h) return ph(l, ['red', 'peach', 'yellow'][h[1].length - 1], true);
+    const segs = []; let rest = l;
+    const b = rest.match(/^(\s*)(-|\d+\.) /);
+    if (b) { segs.push([b[1], 'text'], [b[2], 'teal'], [' ', 'text']); rest = rest.slice(b[0].length); }
+    const d = rest.match(/^(\d{4}-\d{2})/);
+    if (d) { segs.push([d[1], 'peach']); rest = rest.slice(d[1].length); }
+    rest.split(/(●)/).forEach(p => { if (p === '●') segs.push([p, 'teal']); else if (p) segs.push(...ph(p, 'text')); });
+    return segs;
+  });
+}
+function hlLua(text) {
+  const KW = new Set(['return', 'local', 'nil', 'function', 'end']);
+  return text.split('\n').map(l => {
+    const ci = l.indexOf('--'); const code = ci >= 0 ? l.slice(0, ci) : l, com = ci >= 0 ? l.slice(ci) : '';
+    const segs = []; let m; const re = /("[^"]*")|([A-Za-z_]\w*)|([{}(),=])|(\s+)|(.)/g;
+    while ((m = re.exec(code))) {
+      if (m[1]) segs.push([m[1], 'green']);
+      else if (m[2]) {
+        const after = code.slice(re.lastIndex);
+        segs.push([m[2], m[2] === 'true' || m[2] === 'false' ? 'peach' : KW.has(m[2]) ? 'mauve' : /^\s*=(?!=)/.test(after) ? 'lav' : 'text']);
+      } else if (m[3]) segs.push([m[3], 'ov2']);
+      else segs.push([m[0], 'text']);
+    }
+    if (com) segs.push(...ph(com, 'ov0'));
+    return segs;
+  });
+}
+const HL = Object.fromEntries(Object.entries(FILES).map(([p, t]) => [p, p.endsWith('.lua') ? hlLua(t) : hlMd(t)]));
+
+/* ---------------- character grid ---------------- */
+let cssW = 0, cssH = 0, dpr = 1, fontPx = 14, cols = 0, rows = 0, cw = 8, chh = 20;
+let CH, FG, BG, BD, CLK = [], portrait = null, lastH = 10;
+let F0 = '', F1 = '';
+function gridInit() { const n = cols * rows; CH = new Array(n); FG = new Array(n); BG = new Array(n); BD = new Uint8Array(n); clearGrid(); }
+function clearGrid() { CH.fill(' '); FG.fill('text'); BG.fill('bg'); BD.fill(0); CLK = []; }
+function put(x, y, s, fg, bg, bold) {
+  if (y < 0 || y >= rows) return x + [...s].length;
+  for (const c of s) {
+    if (x >= 0 && x < cols) { const i = y * cols + x; CH[i] = c; if (fg) FG[i] = fg; if (bg) BG[i] = bg; BD[i] = bold ? 1 : 0; }
+    x++;
+  }
+  return x;
+}
+function fill(y, x0, x1, bg) { if (y < 0 || y >= rows) return; for (let x = Math.max(0, x0); x < Math.min(cols, x1); x++) { const i = y * cols + x; CH[i] = ' '; BG[i] = bg; } }
+function clk(x0, x1, y, key, act, hover = true) { CLK.push({ x0, x1, y, key, act, hover }); }
+
+const LOGO = (() => {
+  const L = {
+    F: ['███████╗', '██╔════╝', '█████╗  ', '██╔══╝  ', '██║     ', '╚═╝     '],
+    R: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██║  ██║', '╚═╝  ╚═╝'],
+    A: [' █████╗ ', '██╔══██╗', '███████║', '██╔══██║', '██║  ██║', '╚═╝  ╚═╝'],
+    N: ['███╗   ██╗', '████╗  ██║', '██╔██╗ ██║', '██║╚██╗██║', '██║ ╚████║', '╚═╝  ╚═══╝'],
+    C: [' ██████╗', '██╔════╝', '██║     ', '██║     ', '╚██████╗', ' ╚═════╝'],
+    O: [' ██████╗ ', '██╔═══██╗', '██║   ██║', '██║   ██║', '╚██████╔╝', ' ╚═════╝ '],
+  };
+  return [0, 1, 2, 3, 4, 5].map(r => [...'FRANCO'].map(c => L[c][r]).join(''));
+})();
+const MS = (performance.now() - T0 + 14).toFixed(2);
+
+function notify(title, msg, level = 'info') {
+  S.notes.push({ title, msg, level, until: performance.now() + 4500 });
+  if (S.notes.length > 3) S.notes.shift();
+  dirty();
+}
+function openFile(p, line) {
+  if (p === 'cv.pdf') return notify('Download', 'cv.pdf would download here.');
+  S.view = 'editor';
+  if (!S.buffers.includes(p)) S.buffers.push(p);
+  S.active = p;
+  S.cursor[p] = line != null ? line : (S.cursor[p] ?? 0);
+  dirty();
+}
+function closeBuf(b) {
+  S.buffers = S.buffers.filter(x => x !== b);
+  if (S.active === b) S.active = S.buffers[S.buffers.length - 1] || null;
+  if (!S.active) S.view = 'dashboard';
+  dirty();
+}
+const DASH = [
+  { k: 'w', ic: '☺', d: 'Whoami', a: () => openFile('README.md') },
+  { k: 'p', ic: '▤', d: 'Projects', a: () => openFile('projects/portfolio.md') },
+  { k: 'e', ic: '◈', d: 'Experience', a: () => openFile('experience/acme.md') },
+  { k: 'c', ic: '✉', d: 'Contact', a: () => openFile('README.md', readmeLines.indexOf('## Contact')) },
+  { k: 't', ic: '◷', d: 'Timeline', a: () => openFile('timeline.md') },
+  { k: 'd', ic: '↓', d: 'Download CV', a: () => openFile('cv.pdf') },
+];
+
+function drawDash() {
+  const h = 6 + 2 + DASH.length + 2 + 1;
+  let y = Math.max(0, Math.floor((rows - h) / 2));
+  const lw = [...LOGO[0]].length, lx = Math.floor((cols - lw) / 2);
+  LOGO.forEach((r, i) => put(lx, y + i, r, 'blue'));
+  y += 8;
+  const mw = Math.min(46, cols - 2), mx = Math.floor((cols - mw) / 2);
+  for (const d of DASH) {
+    put(mx + 1, y, d.ic, 'blue'); put(mx + 4, y, d.d, 'text'); put(mx + mw - 2, y, d.k, 'peach');
+    clk(mx, mx + mw, y, 'dash:' + d.k, d.a); y++;
+  }
+  y++;
+  const foot = `⚡ Franco loaded 14/14 skills in ${MS}ms`;
+  const fx = Math.floor((cols - [...foot].length) / 2);
+  put(fx, y, '⚡', 'yellow'); put(fx + 2, y, foot.slice(2), 'ov2');
+}
+
+function drawEditor() {
+  const expW = S.expOpen && cols >= 84 ? 26 : 0;
+  const top = 1, bottom = rows - 3, H = bottom - top + 1; lastH = H;
+  // buffer tabs
+  fill(0, 0, cols, 'crust');
+  if (expW) { fill(0, 0, expW, 'mantle'); put(2, 0, 'File Explorer', 'blue', null, true); }
+  let x = expW;
+  for (const b of S.buffers) {
+    const on = b === S.active, x0 = x;
+    x = put(x, 0, ` ${ICON(b)} ${b.split('/').pop()} `, on ? 'text' : 'ov2', on ? 'bg' : 'crust', on);
+    const xc = x; x = put(x, 0, '✕ ', 'ov0', on ? 'bg' : 'crust');
+    clk(x0, xc, 0, 'tab:' + b, () => { S.active = b; dirty(); });
+    clk(xc, x, 0, 'close:' + b, () => closeBuf(b));
+  }
+  // explorer
+  if (expW) {
+    for (let y = top; y <= bottom; y++) fill(y, 0, expW, 'mantle');
+    let y = top; put(1, y, '~/franco', 'blue', null, true); y++;
+    for (const n of TREE) {
+      if (y > bottom) break;
+      if (typeof n === 'string') {
+        if (S.active === n) fill(y, 0, expW, 's0');
+        put(3, y, ICON(n) + ' ' + n, 'text'); clk(0, expW, y, 'open:' + n, () => openFile(n)); y++; continue;
+      }
+      const open = !S.collapsed.has(n.dir);
+      put(1, y, (open ? '▾' : '▸') + ' ▪ ' + n.dir, 'blue');
+      clk(0, expW, y, 'dir:' + n.dir, () => { open ? S.collapsed.add(n.dir) : S.collapsed.delete(n.dir); dirty(); }); y++;
+      if (open) n.kids.forEach((k, i) => {
+        if (y > bottom) return;
+        const p = n.dir + '/' + k;
+        if (S.active === p) fill(y, 0, expW, 's0');
+        put(3, y, i === n.kids.length - 1 ? '└ ' : '│ ', 's1');
+        put(5, y, ICON(p) + ' ' + k, 'text');
+        if (/current: true/.test(FILES[p])) put(5 + 2 + k.length + 1, y, '●', 'green');
+        clk(0, expW, y, 'open:' + p, () => openFile(p)); y++;
+      });
+    }
+  }
+  // buffer
+  const p = S.active, lines = HL[p], n = lines.length, bx = expW, codeX = bx + 6;
+  const cur = Math.min(S.cursor[p] ?? 0, n - 1); S.cursor[p] = cur;
+  let sc = S.scroll[p] || 0; const pad = 3;
+  if (cur < sc + pad) sc = cur - pad;
+  if (cur > sc + H - 1 - pad) sc = cur - (H - 1 - pad);
+  sc = Math.max(0, Math.min(sc, n - 1)); S.scroll[p] = sc;
+  const live = S.ascii === 'live' && p === 'README.md';
+  for (let i = 0; i < H; i++) {
+    const y = top + i, li = sc + i;
+    if (li >= n) { put(bx + 1, y, '~', 's1'); continue; }
+    const isCur = li === cur;
+    if (isCur) fill(y, bx, cols, 'cl');
+    put(bx, y, String(isCur ? li + 1 : Math.abs(li - cur)).padStart(4), isCur ? 'lav' : 's1', null, isCur);
+    const inPortrait = li > PSTART && li < PEND;
+    if (!(live && inPortrait)) { let cx = codeX; for (const [t, c, b] of lines[li]) cx = put(cx, y, t, c, null, b); }
+    if (isCur && codeX < cols) { const k = y * cols + codeX; BG[k] = 'text'; FG[k] = 'bg'; }
+    clk(bx, cols, y, 'line:' + li, () => { S.cursor[p] = li; dirty(); }, false);
+  }
+  portrait = null;
+  if (live) {
+    const r0 = top + (PSTART + 1 - sc), r1 = top + (PEND - sc); // r1 exclusive
+    const v0 = Math.max(r0, top), v1 = Math.min(r1, bottom + 1);
+    if (v1 > v0) portrait = { x: codeX, y: r0, w: PW, h: PEND - PSTART - 1, v0, v1 };
+  }
+  // statusline
+  const y = rows - 2; fill(y, 0, cols, 'mantle');
+  let sx = put(0, y, ' NORMAL ', 'crust', 'blue', true);
+  sx = put(sx, y, ' ⎇ main ', 'text', 's0');
+  sx = put(sx, y, ` ${ICON(p)} ${p} `, 'sub');
+  const pct = cur === 0 ? 'Top' : cur === n - 1 ? 'Bot' : Math.round(cur / (n - 1) * 100) + '%';
+  const now = new Date(), time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const right = [[` ${p.endsWith('.lua') ? 'lua' : 'markdown'} `, 'sub'], [` ${pct.padStart(3)} `, 'text', 's0'], [` ${String(cur + 1).padStart(3)}:1 `, 'text', 's0'], [` ${time} `, 'crust', 'blue', true]];
+  const rw = right.reduce((a, s) => a + s[0].length, 0);
+  const hint = ' yy copy line · q dashboard ';
+  if (sx + hint.length + rw < cols) put(cols - rw - hint.length, y, hint, 'ov2');
+  let rx = cols - rw; for (const [t, f, b, bold] of right) rx = put(rx, y, t, f, b, bold);
+}
+
+function wrap(s, w) {
+  const out = []; let line = '';
+  for (const word of s.split(' ')) { if ((line + ' ' + word).trim().length > w) { out.push(line); line = word; } else line = (line + ' ' + word).trim(); }
+  if (line) out.push(line); return out;
+}
+function drawNotes() {
+  let y = 1; const w = Math.min(44, cols - 4), x0 = cols - w - 2;
+  for (const nt of S.notes) {
+    const col = nt.level === 'error' ? 'red' : nt.level === 'warn' ? 'yellow' : 'blue';
+    const body = wrap(nt.msg, w - 4);
+    if (y + body.length + 2 > rows - 2) break;
+    put(x0, y, '╭' + '─'.repeat(w - 2) + '╮', col, 'bg'); put(x0 + 2, y, ` ${nt.title} `, col, 'bg', true);
+    body.forEach((l, i) => { put(x0, y + 1 + i, '│', col, 'bg'); put(x0 + 1, y + 1 + i, ' ' + l.padEnd(w - 3), 'text', 'bg'); put(x0 + w - 1, y + 1 + i, '│', col, 'bg'); });
+    put(x0, y + 1 + body.length, '╰' + '─'.repeat(w - 2) + '╯', col, 'bg');
+    y += body.length + 3;
+  }
+}
+
+function build() {
+  clearGrid();
+  portrait = null;
+  if (S.view === 'dashboard') drawDash(); else drawEditor();
+  if (S.hover) {
+    const c = CLK.find(c => c.key === S.hover && c.hover);
+    if (c) for (let x = c.x0; x < c.x1; x++) { const i = c.y * cols + x; if (x >= 0 && x < cols && BG[i] !== 'text') BG[i] = 's0'; }
+  }
+  drawNotes();
+}
+
+/* ---------------- painting the grid to the canvas ---------------- */
+const BOX = {
+  '─': [1, 1, 0, 0], '│': [0, 0, 1, 1], '╭': [0, 1, 0, 1], '┌': [0, 1, 0, 1], '╮': [1, 0, 0, 1], '┐': [1, 0, 0, 1],
+  '╰': [0, 1, 1, 0], '└': [0, 1, 1, 0], '╯': [1, 0, 1, 0], '┘': [1, 0, 1, 0], '├': [0, 1, 1, 1],
+};
+const DBL = { '═': 'h', '║': 'v', '╔': [1, 1], '╗': [-1, 1], '╚': [1, -1], '╝': [-1, -1] };
+const BLOCK = { '█': [0, 0, 1, 1], '▀': [0, 0, 1, 0.5], '▄': [0, 0.5, 1, 0.5], '▌': [0, 0, 0.5, 1] };
+const SHADE = { '░': 0.28, '▒': 0.5, '▓': 0.75 };
+function paint() {
+  const sc = SCHEMES[S.scheme];
+  const W = cw * dpr, Hh = chh * dpr;
+  g.shadowBlur = 0;
+  g.fillStyle = sc.bg; g.fillRect(0, 0, src.width, src.height);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const b = BG[y * cols + x];
+    if (b !== 'bg') { g.fillStyle = sc[b]; g.fillRect(Math.floor(x * W), Math.floor(y * Hh), Math.ceil(W) + 1, Math.ceil(Hh) + 1); }
+  }
+  const glow = S.effect === 'css';
+  const t = Math.max(1, Math.round(dpr)), d = W * 0.17;
+  g.textBaseline = 'middle'; let bold = -1;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = y * cols + x, c = CH[i];
+    if (c === ' ') continue;
+    const col = sc[FG[i]], X = x * W, Y = y * Hh, cx = X + W / 2, cy = Y + Hh / 2;
+    g.fillStyle = col;
+    if (glow) { g.shadowColor = col + '66'; g.shadowBlur = 5 * dpr; }
+    if (BLOCK[c]) { const [a, b2, w, h] = BLOCK[c]; g.fillRect(X + a * W, Y + b2 * Hh, w * W + 0.5, h * Hh + 0.5); continue; }
+    if (SHADE[c]) { g.globalAlpha = SHADE[c]; g.fillRect(X, Y, W + 0.5, Hh + 0.5); g.globalAlpha = 1; continue; }
+    if (BOX[c]) {
+      const [l, r, u, dn] = BOX[c];
+      if (l) g.fillRect(X, cy - t / 2, W / 2 + t / 2, t);
+      if (r) g.fillRect(cx - t / 2, cy - t / 2, W / 2 + t / 2 + 0.5, t);
+      if (u) g.fillRect(cx - t / 2, Y, t, Hh / 2 + t / 2);
+      if (dn) g.fillRect(cx - t / 2, cy - t / 2, t, Hh / 2 + t / 2 + 0.5);
+      continue;
+    }
+    if (DBL[c]) {
+      const k = DBL[c];
+      if (k === 'h') { g.fillRect(X, cy - d - t / 2, W + 0.5, t); g.fillRect(X, cy + d - t / 2, W + 0.5, t); }
+      else if (k === 'v') { g.fillRect(cx - d - t / 2, Y, t, Hh + 0.5); g.fillRect(cx + d - t / 2, Y, t, Hh + 0.5); }
+      else {
+        const [sx, sy] = k; // sx: horizontal arm direction (+1 right), sy: vertical arm direction (+1 down)
+        const hEdge = sx > 0 ? X + W + 0.5 : X, vEdge = sy > 0 ? Y + Hh + 0.5 : Y;
+        const line = (x1, y1, x2, y2) => g.fillRect(Math.min(x1, x2) - t / 2, Math.min(y1, y2) - t / 2, Math.abs(x2 - x1) + t, Math.abs(y2 - y1) + t);
+        line(cx - sx * d, cy - sy * d, hEdge, cy - sy * d); // outer horizontal
+        line(cx + sx * d, cy + sy * d, hEdge, cy + sy * d); // inner horizontal
+        line(cx - sx * d, cy - sy * d, cx - sx * d, vEdge); // outer vertical
+        line(cx + sx * d, cy + sy * d, cx + sx * d, vEdge); // inner vertical
+      }
+      continue;
+    }
+    if (BD[i] !== bold) { bold = BD[i]; g.font = bold ? F1 : F0; }
+    g.fillText(c, X, cy + dpr * 0.5);
+  }
+  g.shadowBlur = 0;
+}
+function portraitPx() {
+  if (!portrait) return null;
+  const W = cw * dpr, Hh = chh * dpr;
+  return { x: portrait.x * W, y: portrait.y * Hh, w: portrait.w * W, h: portrait.h * Hh, cy0: portrait.v0 * Hh, cy1: portrait.v1 * Hh };
+}
+function drawPicture(t) {
+  const r = portraitPx(); if (!r) return;
+  const { x, y, w, h } = r;
+  g.save(); g.beginPath(); g.rect(x, r.cy0, w, r.cy1 - r.cy0); g.clip();
+  const bgc = g.createLinearGradient(0, y, 0, y + h); bgc.addColorStop(0, '#2b2b2b'); bgc.addColorStop(1, '#090909');
+  g.fillStyle = bgc; g.fillRect(x, y, w, h);
+  const a = S.reduce ? 0.9 : t * 0.7;
+  const lx = x + w * (0.5 + 0.38 * Math.cos(a)), ly = y + h * (0.22 + 0.12 * Math.sin(a * 1.3));
+  const shade = R => { const gr = g.createRadialGradient(lx, ly, 0, lx, ly, R); gr.addColorStop(0, '#f4f4f4'); gr.addColorStop(0.5, '#8c8c8c'); gr.addColorStop(1, '#151515'); return gr; };
+  const cx = x + w / 2;
+  g.fillStyle = shade(w * 0.95); g.beginPath(); g.ellipse(cx, y + h * 1.06, w * 0.44, h * 0.34, 0, 0, Math.PI * 2); g.fill();
+  g.fillRect(cx - w * 0.07, y + h * 0.55, w * 0.14, h * 0.25);
+  g.fillStyle = shade(w * 0.62); g.beginPath(); g.ellipse(cx, y + h * 0.42, w * 0.18, h * 0.26, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#141414'; g.beginPath(); g.ellipse(cx, y + h * 0.3, w * 0.195, h * 0.15, 0, Math.PI, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+/* ---------------- WebGL: shaders adapted from Texture Lab ---------------- */
+const VERT = `#version 300 es
+in vec2 aPosition;
+out vec2 vUv;
+void main() { vUv = aPosition * 0.5 + 0.5; gl_Position = vec4(aPosition, 0.0, 1.0); }`;
+const HEADER = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uInput;
+uniform vec2 uResolution;
+uniform float uTime;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float PI = 3.14159265359;
+float luma(vec3 c) { return dot(c, LUMA); }
+vec3 toLinear(vec3 c) { return pow(max(c, 0.0), vec3(2.2)); }
+vec3 toGamma(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float smootherstep(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+`;
+const FS = {
+copy: `void main() { outColor = vec4(texture(uInput, vUv).rgb, 1.0); }`,
+blur: `
+uniform vec2 uStep;
+uniform float uSigma;
+void main() {
+  float sigma = max(uSigma, 0.001);
+  float radius = min(ceil(sigma * 3.0), 40.0);
+  vec3 sum = texture(uInput, vUv).rgb;
+  float total = 1.0;
+  for (int i = 1; i <= 40; i++) {
+    float x = float(i);
+    if (x > radius) break;
+    float w = exp(-x * x / (2.0 * sigma * sigma));
+    vec2 offset = uStep * x;
+    sum += (texture(uInput, vUv + offset).rgb + texture(uInput, vUv - offset).rgb) * w;
+    total += 2.0 * w;
+  }
+  outColor = vec4(sum / total, 1.0);
+}`,
+cells: `
+uniform vec2 uCell;
+uniform vec2 uImage;
+void main() {
+  vec2 origin = floor(gl_FragCoord.xy) * uCell;
+  vec3 sum = vec3(0.0);
+  for (int y = 0; y < 4; y++) for (int x = 0; x < 4; x++) {
+    vec2 p = origin + (vec2(float(x), float(y)) + 0.5) * 0.25 * uCell;
+    sum += texture(uInput, min(p, uImage - 0.5) / uImage).rgb;
+  }
+  vec3 average = sum / 16.0;
+  outColor = vec4(average, luma(average));
+}`,
+glyphs: `
+uniform sampler2D uCells;
+uniform sampler2D uAtlas;
+uniform vec2 uCell;
+uniform vec2 uGrid;
+uniform float uCount;
+uniform vec3 uInk;
+uniform float uContrast;
+uniform float uFlicker;
+float tone(float v) { return clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0); }
+float flickerAt(vec2 cell) {
+  float tick = floor(uTime * 10.0 + hash12(cell) * 4.0);
+  return hash12(cell + tick * 17.37) - 0.5;
+}
+void main() {
+  vec2 coord = vUv * uResolution / uCell;
+  vec2 cell = floor(coord);
+  vec2 local = coord - cell;
+  vec4 data = texelFetch(uCells, clamp(ivec2(cell), ivec2(0), ivec2(uGrid) - 1), 0);
+  float value = tone(data.a);
+  if (uFlicker > 0.0) value = clamp(value + flickerAt(cell) * uFlicker * 2.2 / max(uCount - 1.0, 1.0), 0.0, 1.0);
+  float index = floor(value * (uCount - 1.0) + 0.5);
+  vec2 atlasUv = vec2((index + local.x) / uCount, local.y);
+  vec2 continuous = coord / vec2(uCount, 1.0);
+  float a = textureGrad(uAtlas, atlasUv, dFdx(continuous), dFdy(continuous)).a;
+  outColor = vec4(uInk * a, a);
+}`,
+acomp: `
+uniform sampler2D uGlyphs;
+uniform vec3 uBackground;
+uniform vec4 uRect;
+void main() {
+  vec3 base = texture(uInput, vUv).rgb;
+  vec4 gq = texture(uGlyphs, vUv);
+  vec3 ascii = uBackground * (1.0 - gq.a) + gq.rgb;
+  float m = step(uRect.x, vUv.x) * step(vUv.x, uRect.z) * step(uRect.y, vUv.y) * step(vUv.y, uRect.w);
+  outColor = vec4(mix(base, ascii, m), 1.0);
+}`,
+bpre: `
+uniform vec2 uTexel;
+uniform float uThreshold;
+uniform float uKnee;
+vec3 tap(vec2 uv) { return toLinear(texture(uInput, uv).rgb); }
+void main() {
+  vec2 uv = vUv;
+  vec3 color = (tap(uv + uTexel * vec2(-1.0, -1.0)) + tap(uv + uTexel * vec2(1.0, -1.0)) + tap(uv + uTexel * vec2(-1.0, 1.0)) + tap(uv + uTexel * vec2(1.0, 1.0))) * 0.25;
+  float bright = max(color.r, max(color.g, color.b));
+  float soft = clamp(bright - uThreshold + uKnee, 0.0, 2.0 * uKnee);
+  soft = soft * soft / (4.0 * uKnee + 1e-5);
+  float contribution = max(soft, bright - uThreshold) / max(bright, 1e-5);
+  outColor = vec4(color * contribution, 1.0);
+}`,
+bdown: `
+uniform vec2 uTexel;
+void main() {
+  vec2 uv = vUv; vec2 t = uTexel;
+  vec3 a = texture(uInput, uv + t * vec2(-2.0, 2.0)).rgb;
+  vec3 b = texture(uInput, uv + t * vec2(0.0, 2.0)).rgb;
+  vec3 c = texture(uInput, uv + t * vec2(2.0, 2.0)).rgb;
+  vec3 d = texture(uInput, uv + t * vec2(-2.0, 0.0)).rgb;
+  vec3 e = texture(uInput, uv).rgb;
+  vec3 f = texture(uInput, uv + t * vec2(2.0, 0.0)).rgb;
+  vec3 g = texture(uInput, uv + t * vec2(-2.0, -2.0)).rgb;
+  vec3 h = texture(uInput, uv + t * vec2(0.0, -2.0)).rgb;
+  vec3 i = texture(uInput, uv + t * vec2(2.0, -2.0)).rgb;
+  vec3 j = texture(uInput, uv + t * vec2(-1.0, 1.0)).rgb;
+  vec3 k = texture(uInput, uv + t * vec2(1.0, 1.0)).rgb;
+  vec3 l = texture(uInput, uv + t * vec2(-1.0, -1.0)).rgb;
+  vec3 m = texture(uInput, uv + t * vec2(1.0, -1.0)).rgb;
+  outColor = vec4(e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125, 1.0);
+}`,
+bup: `
+uniform sampler2D uLower;
+uniform vec2 uTexel;
+uniform float uSpread;
+void main() {
+  vec4 d = vec4(1.0, 1.0, -1.0, 0.0) * uTexel.xyxy;
+  vec3 s = texture(uLower, vUv - d.xy).rgb;
+  s += texture(uLower, vUv - d.wy).rgb * 2.0;
+  s += texture(uLower, vUv - d.zy).rgb;
+  s += texture(uLower, vUv + d.zw).rgb * 2.0;
+  s += texture(uLower, vUv).rgb * 4.0;
+  s += texture(uLower, vUv + d.xw).rgb * 2.0;
+  s += texture(uLower, vUv + d.zy).rgb;
+  s += texture(uLower, vUv + d.wy).rgb * 2.0;
+  s += texture(uLower, vUv + d.xy).rgb;
+  outColor = vec4(texture(uInput, vUv).rgb + s / 16.0 * uSpread, 1.0);
+}`,
+bcomp: `
+uniform sampler2D uBloom;
+uniform sampler2D uSmall;
+uniform float uIntensity;
+uniform vec3 uTint;
+uniform float uLevels;
+void main() {
+  vec3 base = toLinear(texture(uInput, vUv).rgb);
+  vec3 glow = texture(uBloom, vUv).rgb / max(uLevels * 0.55, 1.0);
+  vec3 mean = texture(uSmall, vec2(0.25)).rgb + texture(uSmall, vec2(0.75, 0.25)).rgb;
+  mean += texture(uSmall, vec2(0.25, 0.75)).rgb + texture(uSmall, vec2(0.75)).rgb;
+  float energy = luma(mean * 0.25);
+  glow *= uIntensity * 1.5 / (1.0 + energy * 5.0);
+  vec3 color = 1.0 - (1.0 - base) * exp(-glow * uTint);
+  outColor = vec4(toGamma(color), 1.0);
+}`,
+crt: `
+uniform sampler2D uGlowMap;
+uniform float uCurvature;
+uniform float uLines;
+uniform float uScan;
+uniform float uGlow;
+uniform float uVignette;
+uniform float uFlicker;
+uniform float uRoll;
+uniform float uConvergence;
+uniform float uSeed;
+vec2 warp(vec2 uv) {
+  vec2 c = uv * 2.0 - 1.0;
+  vec2 offset = c.yx * c.yx * vec2(0.11, 0.16) * uCurvature;
+  c += c * offset;
+  return c * 0.5 + 0.5;
+}
+void main() {
+  vec2 uv = warp(vUv);
+  vec2 edge = smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), uv) * smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), 1.0 - uv);
+  float inside = edge.x * edge.y;
+  float shift = uConvergence / uResolution.x;
+  vec3 color;
+  color.r = texture(uInput, uv + vec2(shift, 0.0)).r;
+  color.g = texture(uInput, uv).g;
+  color.b = texture(uInput, uv - vec2(shift, 0.0)).b;
+  vec3 linear = toLinear(color);
+  float y = uv.y * uLines;
+  float s = sin(fract(y) * PI);
+  float bright = luma(linear);
+  float beam = pow(s, mix(2.4, 0.7, clamp(bright * 1.6, 0.0, 1.0)));
+  linear *= mix(1.0, beam * 1.55, uScan);
+  linear += toLinear(texture(uGlowMap, uv).rgb) * uGlow;
+  if (uRoll > 0.0) {
+    float band = fract(uv.y - uTime * 0.11);
+    linear *= 1.0 + smoothstep(0.0, 0.12, band) * smoothstep(0.26, 0.12, band) * uRoll * 0.16;
+  }
+  linear *= 1.0 + (hash11(uSeed) - 0.5) * uFlicker * 0.12;
+  vec2 v = vUv * 2.0 - 1.0;
+  float vig = smootherstep(1.45, 0.35, length(v * vec2(0.92, 1.0)));
+  linear *= mix(1.0, vig, uVignette);
+  outColor = vec4(toGamma(linear) * inside, 1.0);
+}`,
+};
+
+let PR = {}, T = {}, srcT = null, atlas = null, FMT = null, time = 0;
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+function program(body) {
+  const sh = (type, s) => { const o = gl.createShader(type); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, HEADER + body));
+  gl.bindAttribLocation(p, 0, 'aPosition'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const locs = {};
+  return { p, loc: n => (n in locs ? locs[n] : (locs[n] = gl.getUniformLocation(p, n))) };
+}
+function texture(w, h, nearest, internal, format, type) {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, null);
+  const f = nearest ? gl.NEAREST : gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+function target(w, h, nearest) {
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  const tex = texture(w, h, nearest, FMT.internal, gl.RGBA, FMT.type);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+function freeTarget(t) { if (t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); } }
+function setU(prog, name, v) {
+  const l = prog.loc(name); if (l == null) return;
+  if (typeof v === 'number') gl.uniform1f(l, v);
+  else if (v.length === 2) gl.uniform2f(l, v[0], v[1]);
+  else if (v.length === 3) gl.uniform3f(l, v[0], v[1], v[2]);
+  else if (v.length === 4) gl.uniform4f(l, v[0], v[1], v[2], v[3]);
+}
+function pass(prog, o) {
+  gl.useProgram(prog.p);
+  const tg = o.target;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, tg ? tg.fb : null);
+  const w = tg ? tg.w : gl.drawingBufferWidth, h = tg ? tg.h : gl.drawingBufferHeight;
+  gl.viewport(0, 0, w, h);
+  let unit = 0;
+  const bind = (name, t) => { const l = prog.loc(name); if (l == null) return; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.uniform1i(l, unit); unit++; };
+  if (o.input) bind('uInput', o.input);
+  for (const k in o.textures || {}) bind(k, o.textures[k]);
+  setU(prog, 'uResolution', [w, h]); setU(prog, 'uTime', time);
+  for (const k in o.uniforms || {}) setU(prog, k, o.uniforms[k]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  return tg;
+}
+function glInit() {
+  const ext = gl.getExtension('EXT_color_buffer_float');
+  FMT = ext ? { internal: gl.RGBA16F, type: gl.HALF_FLOAT } : { internal: gl.RGBA8, type: gl.UNSIGNED_BYTE };
+  for (const k in FS) PR[k] = program(FS[k]);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  // glyph atlas for the ASCII layer ("standard" charset, bold)
+  const chars = ' .:-=+*#%@', gh = 64, gw = Math.round(gh * 0.6);
+  const c = document.createElement('canvas'); c.width = gw * chars.length; c.height = gh;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.font = `700 ${Math.round(gh * 0.8)}px "JetBrains Mono", ui-monospace, monospace`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  [...chars].forEach((ch, i) => x.fillText(ch, i * gw + gw / 2, gh / 2 + 2));
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  atlas = { tex, count: chars.length, aspect: gw / gh };
+}
+function glAlloc() {
+  for (const k in T) { const v = T[k]; Array.isArray(v) ? v.forEach(freeTarget) : freeTarget(v); }
+  T = {};
+  if (srcT) gl.deleteTexture(srcT.tex);
+  const W = src.width, H = src.height;
+  srcT = { tex: texture(W, H, false, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE), w: W, h: H };
+  T.ascii = target(W, H); T.glyphs = target(W, H); T.bloom = target(W, H);
+  T.h1 = target(W / 2, H / 2); T.h2 = target(W / 2, H / 2); T.h3 = target(W / 2, H / 2);
+  const chain = [target(W / 2, H / 2)];
+  while (chain.length < 7 && Math.min(chain[chain.length - 1].w, chain[chain.length - 1].h) > 12) {
+    const l = chain[chain.length - 1]; chain.push(target(l.w / 2, l.h / 2));
+  }
+  T.chain = chain; T.ups = chain.slice(0, -1).map(l => target(l.w, l.h));
+  T.cells = null;
+}
+function renderGL() {
+  const W = src.width, H = src.height, sc = SCHEMES[S.scheme];
+  if (S.effect !== 'shader') { pass(PR.copy, { input: srcT }); return; }
+  const roll = S.reduce ? 0 : P.roll, flick = S.reduce ? 0 : P.flicker, aflick = S.reduce ? 0 : P.aFlicker;
+  let cur = srcT;
+  const pr = portraitPx();
+  if (S.ascii === 'full' || (S.ascii === 'live' && pr)) {
+    const cellH = Math.max(3, P.aSize * dpr), cellW = cellH * atlas.aspect;
+    const gc = Math.ceil(W / cellW), gr = Math.ceil(H / cellH);
+    if (!T.cells || T.cells.w !== gc || T.cells.h !== gr) { freeTarget(T.cells); T.cells = target(gc, gr, true); }
+    pass(PR.cells, { input: cur, target: T.cells, uniforms: { uCell: [cellW, cellH], uImage: [W, H] } });
+    pass(PR.glyphs, { input: cur, target: T.glyphs, textures: { uCells: T.cells, uAtlas: { tex: atlas.tex } },
+      uniforms: { uCell: [cellW, cellH], uGrid: [gc, gr], uCount: atlas.count, uInk: hex(sc.ink), uContrast: P.aContrast, uFlicker: aflick } });
+    const rect = S.ascii === 'full' ? [0, 0, 1, 1] : [pr.x / W, 1 - pr.cy1 / H, (pr.x + pr.w) / W, 1 - pr.cy0 / H];
+    pass(PR.acomp, { input: cur, target: T.ascii, textures: { uGlyphs: T.glyphs }, uniforms: { uBackground: hex(sc.bg), uRect: rect } });
+    cur = T.ascii;
+  }
+  // bloom
+  const th = Math.pow(P.bThreshold, 2.2);
+  const chain = T.chain;
+  pass(PR.bpre, { input: cur, target: chain[0], uniforms: { uTexel: [1 / W, 1 / H], uThreshold: th, uKnee: Math.max(th * 0.5, 0.001) } });
+  for (let i = 1; i < chain.length; i++) pass(PR.bdown, { input: chain[i - 1], target: chain[i], uniforms: { uTexel: [1 / chain[i - 1].w, 1 / chain[i - 1].h] } });
+  let lower = chain[chain.length - 1];
+  for (let i = chain.length - 2; i >= 0; i--) {
+    pass(PR.bup, { input: chain[i], target: T.ups[i], textures: { uLower: lower }, uniforms: { uTexel: [1 / lower.w, 1 / lower.h], uSpread: P.bRadius } });
+    lower = T.ups[i];
+  }
+  pass(PR.bcomp, { input: cur, target: T.bloom, textures: { uBloom: lower, uSmall: chain[chain.length - 1] },
+    uniforms: { uIntensity: P.bIntensity, uTint: hex(sc.tint), uLevels: chain.length } });
+  cur = T.bloom;
+  // CRT glow map: gaussian blur (sigma 6 units) at half resolution
+  pass(PR.copy, { input: cur, target: T.h1 });
+  const sig = 3 * dpr;
+  pass(PR.blur, { input: T.h1, target: T.h2, uniforms: { uStep: [1 / T.h1.w, 0], uSigma: sig } });
+  pass(PR.blur, { input: T.h2, target: T.h3, uniforms: { uStep: [0, 1 / T.h1.h], uSigma: sig } });
+  pass(PR.crt, { input: cur, textures: { uGlowMap: T.h3 }, uniforms: {
+    uCurvature: P.curvature, uLines: H / Math.max(1.5, P.lines * dpr), uScan: P.scan, uGlow: P.glow,
+    uVignette: P.vignette, uFlicker: flick, uRoll: roll, uConvergence: P.convergence * dpr, uSeed: Math.floor(time * 30) * 1.7 } });
+}
+
+/* ---------------- layout and loop ---------------- */
+let needsDraw = true;
+const dirty = () => { needsDraw = true; };
+function layout() {
+  cssW = scrEl.clientWidth; if (!cssW) return;
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  fontPx = cssW < 640 ? 11 : cssW < 900 ? 12.5 : 14;
+  cssH = Math.round(Math.min(760, Math.max(cssW < 640 ? 500 : 440, cssW * 0.6)));
+  scrEl.style.height = cssH + 'px';
+  src.width = Math.round(cssW * dpr); src.height = Math.round(cssH * dpr);
+  if (glOk) { view.width = src.width; view.height = src.height; }
+  F0 = `400 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  F1 = `700 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  g.font = F0;
+  const m = g.measureText('M').width / dpr, lh = Math.round(fontPx * 1.5);
+  cols = Math.max(24, Math.floor(cssW / m)); rows = Math.max(12, Math.floor(cssH / lh));
+  cw = cssW / cols; chh = cssH / rows;
+  gridInit();
+  if (glOk) glAlloc();
+  needsDraw = true;
+}
+let frames = 0, fpsT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  time = now / 1000;
+  if (!cols) return;
+  if (S.notes.length && S.notes[0].until < now) { S.notes = S.notes.filter(n => n.until >= now); needsDraw = true; }
+  let upload = false;
+  if (needsDraw) { build(); paint(); needsDraw = false; upload = true; }
+  if (S.ascii === 'live' && portrait) { drawPicture(time); upload = true; }
+  if (glOk) {
+    if (upload) {
+      gl.bindTexture(gl.TEXTURE_2D, srcT.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    }
+    if (upload || S.effect === 'shader') renderGL();
+  }
+  frames++;
+  if (now - fpsT > 1000) { $('#fps').textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps · ${cols}×${rows} cells`; frames = 0; fpsT = now; }
+}
+
+/* ---------------- input: mouse goes through the same curve as the shader ---------------- */
+function cellAt(e) {
+  const r = view.getBoundingClientRect();
+  let u = (e.clientX - r.left) / r.width, v = 1 - (e.clientY - r.top) / r.height;
+  if (glOk && S.effect === 'shader') {
+    let cx = u * 2 - 1, cy = v * 2 - 1;
+    const ox = cy * cy * 0.11 * P.curvature, oy = cx * cx * 0.16 * P.curvature;
+    cx += cx * ox; cy += cy * oy; u = cx * 0.5 + 0.5; v = cy * 0.5 + 0.5;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+  }
+  return { col: Math.floor(u * cols), row: Math.floor((1 - v) * rows) };
+}
+const hit = c => c && CLK.find(k => k.y === c.row && c.col >= k.x0 && c.col < k.x1);
+function bindInput() {
+  view.addEventListener('mousemove', e => {
+    const k = hit(cellAt(e)); const key = k && k.hover ? k.key : null;
+    view.style.cursor = k ? 'pointer' : 'default';
+    if (key !== S.hover) { S.hover = key; dirty(); }
+  });
+  view.addEventListener('mouseleave', () => { if (S.hover) { S.hover = null; dirty(); } });
+  view.addEventListener('click', e => { view.focus({ preventScroll: true }); const k = hit(cellAt(e)); if (k) k.act(); });
+  view.addEventListener('wheel', e => {
+    if (S.view !== 'editor') return;
+    e.preventDefault();
+    const p = S.active, n = HL[p].length, step = Math.sign(e.deltaY) * 3;
+    const sc = Math.max(0, Math.min((S.scroll[p] || 0) + step, n - 1)); S.scroll[p] = sc;
+    S.cursor[p] = Math.max(Math.min(S.cursor[p], sc + lastH - 4, n - 1), Math.min(sc + 3, n - 1));
+    dirty();
+  }, { passive: false });
+  view.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (['Shift', 'CapsLock', 'Tab'].includes(k)) return;
+    e.preventDefault();
+    if (S.view === 'dashboard') { const d = DASH.find(x => x.k === k); if (d) d.a(); return; }
+    const p = S.active, n = HL[p].length;
+    if (k === 'g') { if (S.gPend) { S.gPend = false; S.cursor[p] = 0; dirty(); } else S.gPend = true; return; }
+    S.gPend = false;
+    if (k === 'y') {
+      if (!S.yPend) { S.yPend = true; return; }
+      S.yPend = false;
+      const text = FILES[p].split('\n')[S.cursor[p]].trim();
+      const done = () => notify('Yanked', text ? `Copied: ${text.length > 60 ? text.slice(0, 57) + '...' : text}` : 'Copied an empty line.');
+      try { navigator.clipboard.writeText(text).then(done, () => notify('Copy blocked', 'This browser blocked the clipboard here. The real site would fall back to a hidden text field.', 'warn')); }
+      catch (err) { notify('Copy blocked', 'This browser blocked the clipboard here.', 'warn'); }
+      return;
+    }
+    S.yPend = false;
+    if (k === 'j' || k === 'ArrowDown') S.cursor[p] = Math.min(n - 1, S.cursor[p] + 1);
+    else if (k === 'k' || k === 'ArrowUp') S.cursor[p] = Math.max(0, S.cursor[p] - 1);
+    else if (k === 'G') S.cursor[p] = n - 1;
+    else if (k === 'H' || k === 'L') { const i = S.buffers.indexOf(p); S.active = S.buffers[(i + (k === 'L' ? 1 : -1) + S.buffers.length) % S.buffers.length]; }
+    else if (k === 'e') S.expOpen = !S.expOpen;
+    else if (k === 'q' || k === 'Escape') S.view = 'dashboard';
+    else if (k === ' ') return notify('Which-key', 'Not wired in this prototype. The #2 mockup has it.');
+    else return;
+    dirty();
+  });
+}
+
+/* ---------------- page controls ---------------- */
+const SLIDERS = [
+  { grp: 'CRT' },
+  { k: 'curvature', l: 'Curvature', min: 0, max: 1, step: 0.01 },
+  { k: 'scan', l: 'Scanlines', min: 0, max: 1, step: 0.01 },
+  { k: 'lines', l: 'Line size', min: 1.5, max: 10, step: 0.1 },
+  { k: 'glow', l: 'Glow', min: 0, max: 1.5, step: 0.01 },
+  { k: 'convergence', l: 'Color fringe', min: 0, max: 4, step: 0.05 },
+  { k: 'vignette', l: 'Vignette', min: 0, max: 1, step: 0.01 },
+  { k: 'flicker', l: 'Flicker', min: 0, max: 1, step: 0.01 },
+  { k: 'roll', l: 'Rolling band', min: 0, max: 1, step: 0.01 },
+  { grp: 'Bloom' },
+  { k: 'bThreshold', l: 'Threshold', min: 0, max: 1, step: 0.01 },
+  { k: 'bIntensity', l: 'Intensity', min: 0, max: 4, step: 0.01 },
+  { k: 'bRadius', l: 'Radius', min: 0.2, max: 1, step: 0.01 },
+  { grp: 'ASCII' },
+  { k: 'aSize', l: 'Cell size', min: 3, max: 40, step: 0.5 },
+  { k: 'aContrast', l: 'Contrast', min: 0.4, max: 2.5, step: 0.01 },
+  { k: 'aFlicker', l: 'Flicker', min: 0, max: 1, step: 0.01 },
+];
+const slEl = $('#sliders');
+slEl.innerHTML = SLIDERS.map(s => s.grp ? `<div class="grp">${s.grp}</div>` :
+  `<label class="sl" for="sl-${s.k}"><span>${s.l}</span><output id="o-${s.k}"></output><input type="range" id="sl-${s.k}" min="${s.min}" max="${s.max}" step="${s.step}"></label>`).join('');
+function syncControls() {
+  SLIDERS.forEach(s => { if (!s.k) return; $('#sl-' + s.k).value = P[s.k]; $('#o-' + s.k).textContent = (+P[s.k]).toFixed(s.step < 0.1 ? 2 : 1); });
+  for (const [id, key] of [['effectSeg', 'effect'], ['asciiSeg', 'ascii'], ['schemeSeg', 'scheme']])
+    document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S[key]));
+  $('#reduce').checked = S.reduce;
+  scrEl.classList.toggle('css', S.effect === 'css');
+  scrEl.classList.toggle('still', S.reduce);
+  const names = { shader: 'shader (Texture Lab)', css: 'CSS overlay', off: 'off', hand: 'hand-made text art', live: 'live ASCII portrait', full: 'ASCII over whole Screen', macchiato: 'Catppuccin Macchiato', phosphor: 'green phosphor' };
+  const f = (k, d = 2) => (+P[k]).toFixed(d);
+  $('#pick').textContent = `#3 Screen Effect prototype
+effect: ${names[S.effect]}
+ascii: ${names[S.ascii]}
+colors: ${names[S.scheme]}
+reduce motion: ${S.reduce ? 'on' : 'off'}
+crt: curvature ${f('curvature')} · scanlines ${f('scan')} · line size ${f('lines', 1)} · glow ${f('glow')} · fringe ${f('convergence')} · vignette ${f('vignette')} · flicker ${f('flicker')} · roll ${f('roll')}
+bloom: threshold ${f('bThreshold')} · intensity ${f('bIntensity')} · radius ${f('bRadius')}
+ascii: cell ${f('aSize', 1)} · contrast ${f('aContrast')} · flicker ${f('aFlicker')}`;
+}
+slEl.addEventListener('input', e => { const k = e.target.id.replace('sl-', ''); P[k] = +e.target.value; syncControls(); });
+for (const [id, key] of [['effectSeg', 'effect'], ['asciiSeg', 'ascii'], ['schemeSeg', 'scheme']])
+  $('#' + id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; S[key] = b.dataset.v; syncControls(); dirty(); });
+$('#reduce').addEventListener('change', e => { S.reduce = e.target.checked; syncControls(); dirty(); });
+$('#reset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncControls(); });
+$('#copy').addEventListener('click', () => {
+  const text = $('#pick').textContent, btn = $('#copy');
+  const ok = () => { btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = 'Copy pick'), 1500); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('#pick')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch (e) { fallback(); }
+});
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  try { await Promise.race([Promise.all([document.fonts.load('400 14px "JetBrains Mono"'), document.fonts.load('700 14px "JetBrains Mono"')]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+  if (glOk) {
+    try { glInit(); }
+    catch (err) { console.error(err); $('#nogl').textContent = 'The shaders failed to compile in this browser, so only the CSS overlay and Off can be shown.'; $('#nogl').hidden = false; useNoGL(); }
+  } else { $('#nogl').hidden = false; useNoGL(); }
+  syncControls(); bindInput(); layout();
+  new ResizeObserver(() => { if (scrEl.clientWidth !== cssW) layout(); }).observe(scrEl);
+  requestAnimationFrame(frame);
+}
+let glOk = !!gl;
+function useNoGL() {
+  glOk = false;
+  src.tabIndex = 0; src.setAttribute('aria-label', view.getAttribute('aria-label'));
+  view.replaceWith(src); view = src;
+  S.effect = 'css';
+  $('#effectSeg button[data-v="shader"]').disabled = true;
+}
+boot();
+})();
+</script>
