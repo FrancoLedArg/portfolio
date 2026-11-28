@@ -1,0 +1,1131 @@
+<title>Boot Sequence Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a workbench. Option switches on top, the Screen in the middle, a step timeline under it, then keys and your pick. Dark only, like the CRT it previews. */
+:root {
+  --bg: #111219;
+  --panel: #191b25;
+  --line: #2b2e3e;
+  --fg: #dde1f0;
+  --muted: #8d92ab;
+  --accent: #f5a97f;
+  --accent-ink: #1d1a1a;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 6px; }
+h1 { font: 600 1.6rem/1.2 var(--mono); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 80ch; }
+.lede b { color: var(--fg); font-weight: 500; }
+.eyebrow { font: 500 0.72rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 10px; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.82rem; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 0.82rem/1 var(--sans); color: var(--muted); background: none; border: 0; padding: 8px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--fg); }
+.seg button:focus-visible, .btn:focus-visible, .chk input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chk { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--fg); font-size: 0.85rem; }
+.chk input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+.scr { position: relative; width: 100%; height: 520px; background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px #000, 0 30px 80px -30px #000; }
+.scr canvas { display: block; width: 100%; height: 100%; outline: none; cursor: default; transform-origin: 50% 50%; }
+.scr canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.nogl { position: absolute; z-index: 41; left: 12px; top: 12px; right: 12px; font: 500 12.5px/1.4 var(--sans); color: #fff; background: rgba(160,40,40,.85); padding: 8px 12px; border-radius: 8px; }
+
+.tlwrap { display: grid; gap: 8px; }
+.status { margin: 0; font: 0.85rem/1.4 var(--mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+.status em { font-style: normal; color: var(--accent); }
+.tl { position: relative; display: flex; gap: 3px; min-height: 44px; }
+.tl .s { flex: var(--g) 1 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; display: grid; gap: 1px; align-content: start; overflow: hidden; }
+.tl .s b { font: 500 0.74rem/1.2 var(--sans); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl .s i { font: 0.7rem/1.2 var(--mono); font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tl .s.done { background: color-mix(in srgb, var(--accent) 9%, var(--panel)); }
+.tl .s.done b { color: var(--fg); }
+.tl .s.on { border-color: var(--accent); }
+.tl .s.on b { color: var(--fg); }
+.tl .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; transition: opacity .2s; }
+
+.below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 980px) { .below { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 640px) { .below { grid-template-columns: minmax(0, 1fr); } }
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px 18px; min-width: 0; }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.88rem; margin: 0; }
+.keys dt { font-family: var(--mono); color: var(--accent); font-size: 0.82rem; padding-top: 1px; }
+.keys dd { margin: 0; }
+.look { margin: 0; padding-left: 18px; font-size: 0.88rem; display: grid; gap: 6px; }
+.look li::marker { color: var(--accent); }
+pre.pick { margin: 0 0 12px; font: 0.8rem/1.6 var(--mono); white-space: pre-wrap; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; }
+.btn { font: 600 0.85rem/1 var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 7px; padding: 9px 14px; cursor: pointer; }
+.btn.ghost { color: var(--fg); background: transparent; border: 1px solid var(--line); }
+.small { color: var(--muted); font-size: 0.8rem; margin: 10px 0 0; }
+code { font-family: var(--mono); font-size: 0.86em; color: var(--fg); }
+
+.screens { display: grid; gap: 14px; }
+.screens .eyebrow { margin: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { font: 500 0.82rem/1 var(--sans); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 11px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--fg); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+.tabs button:focus-visible, .panel :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.panel { display: grid; gap: 12px; }
+.panel .note { margin: 0; color: var(--muted); font-size: 0.86rem; max-width: 80ch; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px 16px; }
+.field { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); min-width: 0; align-content: start; }
+.field.chk { display: flex; color: var(--fg); padding-top: 18px; }
+.field input[type="text"], .field select, .row input[type="text"], .row select { font: 0.84rem/1.3 var(--mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; min-width: 0; width: 100%; box-sizing: border-box; }
+.rows { display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 1fr) 96px auto; gap: 6px; align-items: center; }
+.row.off input[type="text"], .row.off select { opacity: .45; }
+.row input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.mv { display: flex; gap: 3px; }
+.mv button { font: 0.8rem/1 var(--mono); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 7px 8px; cursor: pointer; }
+.rowhead { font: 500 0.7rem/1 var(--sans); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .row .res, .row select { grid-column: 2 / 3; }
+  .rowhead { display: none; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span>~/</span>franco · Boot Sequence</h1>
+    <p class="lede">Prototype for <b>issue #8</b>. The switches start on your picks so far (Q1 c, always 5–7s). Change any of them and the boot plays again. Use <b>Screen content</b> below to freeze a step and edit what it shows. Press a key or click the Screen to skip, and press <code>q</code> on the Dashboard to power off.</p>
+  </header>
+
+  <div class="bar">
+    <div class="ctl">Q1 Steps
+      <div class="seg" id="stepsSeg">
+        <button type="button" data-v="a">a) No name banner</button>
+        <button type="button" data-v="b">b) Small badge instead</button>
+        <button type="button" data-v="c">c) Name banner</button>
+      </div>
+    </div>
+    <div class="ctl">Q2 First visit
+      <div class="seg" id="lenSeg">
+        <button type="button" data-v="a">a) 5–7s</button>
+        <button type="button" data-v="b">b) 3–4s</button>
+        <button type="button" data-v="c">c) Always ~1s</button>
+        <button type="button" data-v="d">d) Always 5–7s</button>
+      </div>
+    </div>
+    <div class="ctl">Visit
+      <div class="seg" id="visitSeg">
+        <button type="button" data-v="first">First ever</button>
+        <button type="button" data-v="return">Return</button>
+      </div>
+    </div>
+    <div class="ctl">Reduce motion
+      <div class="seg" id="rmSeg">
+        <button type="button" data-v="off">Off</button>
+        <button type="button" data-v="skip">On: no boot</button>
+        <button type="button" data-v="calm">On: calm boot</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" id="replay">Replay boot</button>
+      <button type="button" class="btn ghost" id="poweroff">Power off (:q)</button>
+    </div>
+  </div>
+
+  <div class="scr" id="scr">
+    <canvas id="gl" tabindex="0" aria-label="Portfolio Screen prototype playing the Boot Sequence. Press any key or click to skip."></canvas>
+    <div class="nogl" id="nogl" hidden>This browser has no WebGL2, so the CRT effect is off and the power-on and power-off are only approximated.</div>
+  </div>
+
+  <div class="tlwrap">
+    <p class="status" id="status">Loading…</p>
+    <div class="tl" id="tl"></div>
+  </div>
+
+  <section class="card screens" aria-labelledby="screensTitle">
+    <p class="eyebrow" id="screensTitle">Screen content</p>
+    <p class="note" style="margin:0;color:var(--muted);font-size:.86rem">Pick a step to freeze the Screen on it, then change what it shows. The Screen updates as you type. Press <b>Replay boot</b> to watch the whole thing with your changes.</p>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="panel" id="panel"></div>
+  </section>
+
+  <div class="below">
+    <div class="card">
+      <p class="eyebrow">Try</p>
+      <dl class="keys">
+        <dt>any key / click</dt><dd>During the boot: skip to the Dashboard</dd>
+        <dt>q · ␣ q · :q ⏎</dt><dd>On the Dashboard: power off (<code>:qa :wq :x</code> too)</dd>
+        <dt>any key / click</dt><dd>When it's off: power on, which plays the full boot</dd>
+        <dt>w p e c d s</dt><dd>Dashboard entries (they only show a Notification here)</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Look for</p>
+      <ul class="look">
+        <li>Does the first visit feel like a treat or a wait? Try Q2 a) and b) back to back.</li>
+        <li>With Q1 c), the name banner is followed seconds later by the Dashboard logo. Does it feel repeated?</li>
+        <li>Is the "skip" hint easy to notice without getting in the way?</li>
+        <li>Does the power-off feel right after <code>:q</code>, and is "press any key to power on" clear?</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Your pick</p>
+      <pre class="pick" id="pick"></pre>
+      <button type="button" class="btn" id="copy">Copy pick</button>
+      <p class="small">Paste it back in the chat. The self-test jokes are placeholders for you to replace. Shaders adapted from React Bits Texture Lab, © 2026 David Haz, MIT + Commons Clause.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+ * Throwaway prototype for FrancoLedArg/portfolio#8 (Boot Sequence and quit/power-off).
+ * The CRT and bloom shaders are adapted from React Bits Texture Lab
+ * (src/tools/texture-lab/effects/{crt,bloom}.js and engine/{glsl,blur}.js).
+ * Copyright (c) 2026 David Haz. MIT + Commons Clause License Condition v1.0:
+ * permission to use, copy, modify, merge, publish and distribute as part of an
+ * application, website or product; the components and tools may not be sold,
+ * sublicensed or redistributed on their own, alone, in a bundle or as a ported version.
+ * The power-on/power-off "tube" uniforms are added for this prototype.
+ */
+(() => {
+const $ = s => document.querySelector(s);
+const scrEl = $('#scr');
+let view = $('#gl');
+const gl = view.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+const src = document.createElement('canvas');
+const g = src.getContext('2d');
+
+/* ---------------- settings (ADR 0001) and colors (#4, Catppuccin Macchiato) ---------------- */
+const P = { curvature: 0.15, lines: 3.2, scan: 0.35, glow: 0.25, convergence: 0.8, vignette: 0.45, flicker: 0.15, roll: 0.25,
+  bThreshold: 0.25, bIntensity: 0.9, bRadius: 0.75 };
+const C = { bg: '#24273a', crust: '#181926', black: '#000000', s0: '#363a4f', ov0: '#6e738d', ov2: '#939ab7', sub: '#a5adcb', text: '#cad3f5',
+  blue: '#8aadf4', green: '#a6da95', yellow: '#eed49f', peach: '#f5a97f', red: '#ed8796', mauve: '#c6a0f6', lav: '#b7bdf8' };
+
+/* ---------------- state ---------------- */
+const S = {
+  steps: 'c', len: 'd', visit: 'first',
+  rm: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'calm' : 'off',   // off | skip | calm
+  mode: 'black',          // black | boot | still | dash | offanim | off
+  still: null, tab: 'bios',
+  plan: null, t0: 0, seg: null, segP: 0, skippedAt: null, offAt: 0,
+  screenBg: 'black', notes: [], hover: null, cmd: null, spacePend: false,
+  tube: [1, 1, 0, 0], bright: 1,
+};
+
+/* ---------------- the plan: which steps, how long ---------------- */
+const DUR = {
+  long:  { power: 1.0, bios: 2.3, banner: 1.4, login: 1.6, nvim: 0.7, dash: 0.3 },
+  mid:   { power: 0.6, bios: 1.3, banner: 0.8, login: 0.9, nvim: 0.45, dash: 0.2 },
+  short: { power: 0.3, bios: 0.3, banner: 0.25, login: 0, nvim: 0.25, dash: 0.15 },
+};
+const LEN_NAME = { long: 'full (5–7s)', mid: 'medium (3–4s)', short: 'short (~1s)' };
+function lenKey(forceShort) {
+  if (forceShort) return 'short';
+  if (S.len === 'd') return 'long';
+  if (S.visit === 'return') return 'short';
+  return { a: 'long', b: 'mid', c: 'short' }[S.len];
+}
+const biosOn = () => CT.bios.filter(b => b.on);
+function makePlan(forceShort, why) {
+  const L = lenKey(forceShort), d = DUR[L];
+  const biosDur = L === 'long' ? Math.max(1.4, 0.29 * biosOn().length) : d.bios;
+  const segs = [{ id: 'power', name: 'Power-on', dur: d.power }, { id: 'bios', name: 'Self-test', dur: biosDur }];
+  if (S.steps === 'c') segs.push({ id: 'banner', name: 'Name banner', dur: d.banner });
+  if (d.login) segs.push({ id: 'login', name: 'login:', dur: d.login });
+  segs.push({ id: 'nvim', name: 'nvim', dur: d.nvim });
+  segs.push({ id: 'dash', name: 'Dashboard', dur: d.dash });
+  let t = 0; segs.forEach(s => { s.start = t; t += s.dur; });
+  return { L, segs, total: t, why };
+}
+
+/* ---------------- content ---------------- */
+/* Everything the boot shows. The Screen content panel edits this object. Joke lines are placeholders. */
+const CT = {
+  power: 'line',                          // line | dot
+  h1: 'FRANCO-OS BIOS v26.0',
+  h2: '(C) 2026 Franco. All rights reserved.',
+  bios: [
+    { on: true,  l: 'CPU0: human brain, 1 core', r: 'OK', c: 'green' },
+    { on: true,  l: 'Memory test: 640K', r: 'idk, I forgot', c: 'yellow' },
+    { on: true,  l: 'Uptime', r: '26 years, no reboots', c: 'green' },
+    { on: true,  l: 'Region: Argentina', r: 'UTC-3', c: 'green' },
+    { on: true,  l: 'Drivers: es-AR, en', r: 'OK', c: 'green' },
+    { on: true,  l: 'Peripherals: books, motorcycle, gamepad', r: 'OK', c: 'green' },
+    { on: true,  l: 'Audio: Polyphia', r: 'on repeat', c: 'green' },
+    { on: true,  l: 'Loading save: Super Metroid', r: 'still the best one', c: 'green' },
+    { on: true,  l: 'Services: 3 Claude instances', r: 'running, probably arguing', c: 'green' },
+    { on: true,  l: 'Product brain: UX polish daemon', r: "can't be stopped", c: 'yellow' },
+    { on: true,  l: 'Checking for bugs', r: '3 found, shipped as features', c: 'yellow' },
+    { on: true,  l: 'Mounting ~/franco', r: 'OK', c: 'green' },
+  ],
+  font: 'big',                            // big | compact
+  bannerColor: 'text',
+  sub: 'F R A N C O - O S   v 2 6',
+  tty: 'FRANCO-OS v26 tty1',
+  host: 'franco-os',
+  user: 'visitor',
+  pass: false,
+  lastOn: true,
+  last: 'Last login: Sat Nov 28 11:14 on tty1',
+  cmd: 'nvim',
+};
+const SMALL = { F: ['█▀▀', '█▀ ', '▀  '], R: ['█▀█', '█▀▄', '▀ ▀'], A: ['▄▀█', '█▀█', '▀ ▀'], N: ['█▄ █', '█ ▀█', '▀  ▀'], C: ['█▀▀', '█  ', '▀▀▀'], O: ['█▀█', '█ █', '▀▀▀'] };
+const SMALL_LOGO = [0, 1, 2].map(r => [...'FRANCO'].map(c => SMALL[c][r]).join(' '));
+const LOGO = (() => {
+  const L = {
+    F: ['███████╗', '██╔════╝', '█████╗  ', '██╔══╝  ', '██║     ', '╚═╝     '],
+    R: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██║  ██║', '╚═╝  ╚═╝'],
+    A: [' █████╗ ', '██╔══██╗', '███████║', '██╔══██║', '██║  ██║', '╚═╝  ╚═╝'],
+    N: ['███╗   ██╗', '████╗  ██║', '██╔██╗ ██║', '██║╚██╗██║', '██║ ╚████║', '╚═╝  ╚═══╝'],
+    C: [' ██████╗', '██╔════╝', '██║     ', '██║     ', '╚██████╗', ' ╚═════╝'],
+    O: [' ██████╗ ', '██╔═══██╗', '██║   ██║', '██║   ██║', '╚██████╔╝', ' ╚═════╝ '],
+  };
+  return [0, 1, 2, 3, 4, 5].map(r => [...'FRANCO'].map(c => L[c][r]).join(''));
+})();
+const BADGE = [
+  '╭────────────────╮',
+  '│  ▄▄▄  FRANCO   │',
+  '│  █▄▄  ·OS·     │',
+  '│  █    v1.0     │',
+  '╰────────────────╯',
+];
+const DASH = [
+  { k: 'w', ic: '☺', d: 'Whoami' },
+  { k: 'p', ic: '▤', d: 'Projects' },
+  { k: 'e', ic: '◈', d: 'Experience' },
+  { k: 'c', ic: '✉', d: 'Contact' },
+  { k: 'd', ic: '↓', d: 'Download CV' },
+  { k: 's', ic: '⇄', d: 'Español' },
+];
+let MS = '0.00';
+
+/* ---------------- character grid ---------------- */
+let cssW = 0, cssH = 0, dpr = 1, fontPx = 14, cols = 0, rows = 0, cw = 8, chh = 20;
+let CH, FG, BG, BD, CLK = [];
+let F0 = '', F1 = '';
+function gridInit() { const n = cols * rows; CH = new Array(n); FG = new Array(n); BG = new Array(n); BD = new Uint8Array(n); clearGrid(); }
+function clearGrid() { CH.fill(' '); FG.fill('text'); BG.fill('bg'); BD.fill(0); CLK = []; }
+function put(x, y, s, fg, bg, bold) {
+  if (y < 0 || y >= rows) return x + [...s].length;
+  for (const c of s) {
+    if (x >= 0 && x < cols) { const i = y * cols + x; CH[i] = c; if (fg) FG[i] = fg; if (bg) BG[i] = bg; BD[i] = bold ? 1 : 0; }
+    x++;
+  }
+  return x;
+}
+function clk(x0, x1, y, key, act) { CLK.push({ x0, x1, y, key, act }); }
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const blinkOn = () => Math.floor(performance.now() / 530) % 2 === 0;
+
+function notify(title, msg, level = 'info') {
+  S.notes.push({ title, msg, level, until: performance.now() + 5000 });
+  if (S.notes.length > 3) S.notes.shift();
+  dirty();
+}
+function wrap(s, w) {
+  const out = []; let line = '';
+  for (const word of s.split(' ')) { if ((line + ' ' + word).trim().length > w) { out.push(line); line = word; } else line = (line + ' ' + word).trim(); }
+  if (line) out.push(line); return out;
+}
+function drawNotes() {
+  let y = 1; const w = Math.min(44, cols - 4), x0 = cols - w - 2;
+  for (const nt of S.notes) {
+    const col = nt.level === 'error' ? 'red' : nt.level === 'warn' ? 'yellow' : 'blue';
+    const body = wrap(nt.msg, w - 4);
+    if (y + body.length + 2 > rows - 2) break;
+    put(x0, y, '╭' + '─'.repeat(w - 2) + '╮', col, 'bg'); put(x0 + 2, y, ` ${nt.title} `, col, 'bg', true);
+    body.forEach((l, i) => { put(x0, y + 1 + i, '│', col, 'bg'); put(x0 + 1, y + 1 + i, ' ' + l.padEnd(w - 3), 'text', 'bg'); put(x0 + w - 1, y + 1 + i, '│', col, 'bg'); });
+    put(x0, y + 1 + body.length, '╰' + '─'.repeat(w - 2) + '╯', col, 'bg');
+    y += body.length + 3;
+  }
+}
+
+/* ---------------- what each step draws ---------------- */
+function drawBios(p, L) {
+  const x = 2; let y = 1;
+  put(x, y++, CT.h1, 'blue', null, true);
+  if (CT.h2) put(x, y++, CT.h2, 'ov2');
+  y++;
+  const list = L === 'long' ? biosOn() : biosOn().slice(0, 4);
+  const n = list.length;
+  list.forEach((ln, i) => {
+    const q = L === 'short' ? 1 : clamp01(p * n * 1.08 - i);
+    if (q <= 0) return;
+    const dotsEnd = Math.max(ln.l.length + 2, Math.min(46, cols - 4 - ln.r.length));
+    const total = dotsEnd - ln.l.length - 1;
+    put(x, y, ln.l, 'text');
+    const dots = Math.floor(clamp01(q / 0.75) * total);
+    put(x + ln.l.length + 1, y, '.'.repeat(dots), 'ov0');
+    if (q >= 0.85) put(x + dotsEnd + 1, y, ln.r, ln.c);
+    else if (blinkOn()) put(x + ln.l.length + 1 + dots, y, '█', 'text');
+    y++;
+  });
+  if (S.steps === 'b' && cols >= 64) BADGE.forEach((r, i) => {
+    const bx = cols - BADGE[0].length - 2;
+    put(bx, 1 + i, r, 'lav');
+    if (i >= 1 && i <= 3) put(bx + 3, 1 + i, r.slice(3, 6), 'peach');
+  });
+}
+function drawBanner(p) {
+  const art = CT.font === 'compact' ? SMALL_LOGO : LOGO, n = art.length;
+  const lw = [...art[0]].length, lx = Math.floor((cols - lw) / 2), y0 = Math.floor((rows - n) / 2) - 1;
+  const shown = Math.ceil(clamp01(p / 0.35) * n);
+  art.slice(0, shown).forEach((r, i) => put(lx, y0 + i, r, CT.bannerColor));
+  if (p > 0.45 && CT.sub) put(Math.floor((cols - [...CT.sub].length) / 2), y0 + n + 1, CT.sub, 'ov2');
+}
+function prompt(x, y) {
+  x = put(x, y, `${CT.user}@${CT.host}`, 'green'); x = put(x, y, ':', 'text'); x = put(x, y, '~', 'blue'); return put(x, y, '$ ', 'text');
+}
+// returns where the shell prompt ends, or null while still typing the user name
+function drawLogin(p, full) {
+  const x = 2;
+  if (CT.tty) put(x, 1, CT.tty, 'ov2');
+  const typed = CT.user, k = full ? typed.length : Math.floor(clamp01((p - 0.12) / 0.45) * typed.length);
+  let cx = put(x, 3, `${CT.host} login: `, 'text');
+  cx = put(cx, 3, typed.slice(0, k), 'text');
+  const done = full || p > 0.7;
+  if (!done) { if (blinkOn() || k < typed.length) put(cx, 3, '█', 'text'); return null; }
+  let y = 4;
+  if (CT.pass) put(x, y++, 'Password:', 'text');
+  if (CT.lastOn && CT.last) put(x, y++, CT.last, 'ov2');
+  return { x: prompt(x, y), y };
+}
+function drawNvim(p, L) {
+  const at = L === 'short' ? { x: prompt(2, 1), y: 1 } : drawLogin(1, true);
+  const typed = CT.cmd, k = Math.floor(clamp01(p / 0.6) * typed.length);
+  const cx = put(at.x, at.y, typed.slice(0, k), 'text');
+  if (p < 0.8) put(cx, at.y, '█', 'text');
+}
+function drawDash() {
+  const h = 6 + 2 + DASH.length + 2 + 1;
+  let y = Math.max(0, Math.floor((rows - h) / 2));
+  const lw = [...LOGO[0]].length, lx = Math.floor((cols - lw) / 2);
+  LOGO.forEach((r, i) => put(lx, y + i, r, 'blue'));
+  y += 8;
+  const mw = Math.min(46, cols - 2), mx = Math.floor((cols - mw) / 2);
+  for (const d of DASH) {
+    if (S.hover === 'dash:' + d.k) for (let x = mx; x < mx + mw; x++) BG[y * cols + x] = 's0';
+    put(mx + 1, y, d.ic, 'blue'); put(mx + 4, y, d.d, 'text'); put(mx + mw - 2, y, d.k, 'peach');
+    clk(mx, mx + mw, y, 'dash:' + d.k, () => dashKey(d.k)); y++;
+  }
+  y++;
+  const foot = `⚡ Franco loaded 14/14 skills in ${MS}ms`;
+  const fx = Math.floor((cols - [...foot].length) / 2);
+  put(fx, y, '⚡', 'yellow'); put(fx + 2, y, foot.slice(2), 'ov2');
+}
+function drawCmd() {
+  const w = Math.min(50, cols - 4), x0 = Math.floor((cols - w) / 2), y0 = Math.max(1, Math.floor(rows * 0.22));
+  put(x0, y0, '╭' + '─'.repeat(w - 2) + '╮', 'blue', 'bg'); put(x0 + 2, y0, ' Cmdline ', 'blue', 'bg', true);
+  put(x0, y0 + 1, '│' + ' '.repeat(w - 2) + '│', 'blue', 'bg');
+  let cx = put(x0 + 2, y0 + 1, '❯ ', 'peach'); cx = put(cx, y0 + 1, ':' + S.cmd, 'text');
+  if (blinkOn()) put(cx, y0 + 1, '█', 'text');
+  put(x0, y0 + 2, '╰' + '─'.repeat(w - 2) + '╯', 'blue', 'bg');
+}
+function drawSkipHint() {
+  const t = cols >= 52 ? 'press any key or tap to skip' : 'tap to skip';
+  put(cols - t.length - 2, rows - 2, t, 'ov0');
+}
+function drawOff() {
+  const t = 'press any key to power on';
+  const x = Math.floor((cols - t.length - 2) / 2), y = Math.floor(rows / 2);
+  const end = put(x, y, t, 'ov2');
+  if (blinkOn()) put(end + 1, y, '█', 'ov2');
+}
+
+function build() {
+  clearGrid();
+  if (S.mode === 'black') { S.screenBg = 'black'; return; }
+  if (S.mode === 'off') { S.screenBg = 'black'; drawOff(); return; }
+  if (S.mode === 'boot' || S.mode === 'still') {
+    const still = S.mode === 'still';
+    const seg = still ? { id: S.still } : S.seg, L = still ? 'long' : S.plan.L;
+    const p = !still ? S.segP : seg.id === 'nvim' ? 0.7 : 1;
+    S.screenBg = seg.id === 'dash' ? 'bg' : 'crust';
+    if (seg.id === 'bios') drawBios(p, L);
+    else if (seg.id === 'banner') drawBanner(p);
+    else if (seg.id === 'login') drawLogin(p, false);
+    else if (seg.id === 'nvim') drawNvim(p, L);
+    else if (seg.id === 'dash' && p > 0.5) drawDash();
+    if (seg.id !== 'dash' && seg.id !== 'power') drawSkipHint();
+    return;
+  }
+  S.screenBg = 'bg';
+  drawDash();
+  if (S.mode === 'dash') { if (S.cmd != null) drawCmd(); drawNotes(); }
+}
+
+/* ---------------- painting the grid to the canvas ---------------- */
+const BOX = {
+  '─': [1, 1, 0, 0], '│': [0, 0, 1, 1], '╭': [0, 1, 0, 1], '╮': [1, 0, 0, 1], '╰': [0, 1, 1, 0], '╯': [1, 0, 1, 0],
+};
+const DBL = { '═': 'h', '║': 'v', '╔': [1, 1], '╗': [-1, 1], '╚': [1, -1], '╝': [-1, -1] };
+const BLOCK = { '█': [0, 0, 1, 1], '▀': [0, 0, 1, 0.5], '▄': [0, 0.5, 1, 0.5], '▌': [0, 0, 0.5, 1] };
+function paint() {
+  const W = cw * dpr, Hh = chh * dpr;
+  g.fillStyle = C[S.screenBg]; g.fillRect(0, 0, src.width, src.height);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const b = BG[y * cols + x];
+    if (b !== 'bg') { g.fillStyle = C[b]; g.fillRect(Math.floor(x * W), Math.floor(y * Hh), Math.ceil(W) + 1, Math.ceil(Hh) + 1); }
+  }
+  const t = Math.max(1, Math.round(dpr)), d = W * 0.17;
+  g.textBaseline = 'middle'; let bold = -1;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = y * cols + x, c = CH[i];
+    if (c === ' ') continue;
+    const X = x * W, Y = y * Hh, cx = X + W / 2, cy = Y + Hh / 2;
+    g.fillStyle = C[FG[i]];
+    if (BLOCK[c]) { const [a, b2, w, h] = BLOCK[c]; g.fillRect(X + a * W, Y + b2 * Hh, w * W + 0.5, h * Hh + 0.5); continue; }
+    if (BOX[c]) {
+      const [l, r, u, dn] = BOX[c];
+      if (l) g.fillRect(X, cy - t / 2, W / 2 + t / 2, t);
+      if (r) g.fillRect(cx - t / 2, cy - t / 2, W / 2 + t / 2 + 0.5, t);
+      if (u) g.fillRect(cx - t / 2, Y, t, Hh / 2 + t / 2);
+      if (dn) g.fillRect(cx - t / 2, cy - t / 2, t, Hh / 2 + t / 2 + 0.5);
+      continue;
+    }
+    if (DBL[c]) {
+      const k = DBL[c];
+      if (k === 'h') { g.fillRect(X, cy - d - t / 2, W + 0.5, t); g.fillRect(X, cy + d - t / 2, W + 0.5, t); }
+      else if (k === 'v') { g.fillRect(cx - d - t / 2, Y, t, Hh + 0.5); g.fillRect(cx + d - t / 2, Y, t, Hh + 0.5); }
+      else {
+        const [sx, sy] = k;
+        const hEdge = sx > 0 ? X + W + 0.5 : X, vEdge = sy > 0 ? Y + Hh + 0.5 : Y;
+        const line = (x1, y1, x2, y2) => g.fillRect(Math.min(x1, x2) - t / 2, Math.min(y1, y2) - t / 2, Math.abs(x2 - x1) + t, Math.abs(y2 - y1) + t);
+        line(cx - sx * d, cy - sy * d, hEdge, cy - sy * d);
+        line(cx + sx * d, cy + sy * d, hEdge, cy + sy * d);
+        line(cx - sx * d, cy - sy * d, cx - sx * d, vEdge);
+        line(cx + sx * d, cy + sy * d, cx + sx * d, vEdge);
+      }
+      continue;
+    }
+    if (BD[i] !== bold) { bold = BD[i]; g.font = bold ? F1 : F0; }
+    g.fillText(c, X, cy + dpr * 0.5);
+  }
+}
+
+/* ---------------- WebGL: shaders adapted from Texture Lab ---------------- */
+const VERT = `#version 300 es
+in vec2 aPosition;
+out vec2 vUv;
+void main() { vUv = aPosition * 0.5 + 0.5; gl_Position = vec4(aPosition, 0.0, 1.0); }`;
+const HEADER = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uInput;
+uniform vec2 uResolution;
+uniform float uTime;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float PI = 3.14159265359;
+float luma(vec3 c) { return dot(c, LUMA); }
+vec3 toLinear(vec3 c) { return pow(max(c, 0.0), vec3(2.2)); }
+vec3 toGamma(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float smootherstep(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+`;
+const FS = {
+copy: `void main() { outColor = vec4(texture(uInput, vUv).rgb, 1.0); }`,
+blur: `
+uniform vec2 uStep;
+uniform float uSigma;
+void main() {
+  float sigma = max(uSigma, 0.001);
+  float radius = min(ceil(sigma * 3.0), 40.0);
+  vec3 sum = texture(uInput, vUv).rgb;
+  float total = 1.0;
+  for (int i = 1; i <= 40; i++) {
+    float x = float(i);
+    if (x > radius) break;
+    float w = exp(-x * x / (2.0 * sigma * sigma));
+    vec2 offset = uStep * x;
+    sum += (texture(uInput, vUv + offset).rgb + texture(uInput, vUv - offset).rgb) * w;
+    total += 2.0 * w;
+  }
+  outColor = vec4(sum / total, 1.0);
+}`,
+bpre: `
+uniform vec2 uTexel;
+uniform float uThreshold;
+uniform float uKnee;
+vec3 tap(vec2 uv) { return toLinear(texture(uInput, uv).rgb); }
+void main() {
+  vec2 uv = vUv;
+  vec3 color = (tap(uv + uTexel * vec2(-1.0, -1.0)) + tap(uv + uTexel * vec2(1.0, -1.0)) + tap(uv + uTexel * vec2(-1.0, 1.0)) + tap(uv + uTexel * vec2(1.0, 1.0))) * 0.25;
+  float bright = max(color.r, max(color.g, color.b));
+  float soft = clamp(bright - uThreshold + uKnee, 0.0, 2.0 * uKnee);
+  soft = soft * soft / (4.0 * uKnee + 1e-5);
+  float contribution = max(soft, bright - uThreshold) / max(bright, 1e-5);
+  outColor = vec4(color * contribution, 1.0);
+}`,
+bdown: `
+uniform vec2 uTexel;
+void main() {
+  vec2 uv = vUv; vec2 t = uTexel;
+  vec3 a = texture(uInput, uv + t * vec2(-2.0, 2.0)).rgb;
+  vec3 b = texture(uInput, uv + t * vec2(0.0, 2.0)).rgb;
+  vec3 c = texture(uInput, uv + t * vec2(2.0, 2.0)).rgb;
+  vec3 d = texture(uInput, uv + t * vec2(-2.0, 0.0)).rgb;
+  vec3 e = texture(uInput, uv).rgb;
+  vec3 f = texture(uInput, uv + t * vec2(2.0, 0.0)).rgb;
+  vec3 g = texture(uInput, uv + t * vec2(-2.0, -2.0)).rgb;
+  vec3 h = texture(uInput, uv + t * vec2(0.0, -2.0)).rgb;
+  vec3 i = texture(uInput, uv + t * vec2(2.0, -2.0)).rgb;
+  vec3 j = texture(uInput, uv + t * vec2(-1.0, 1.0)).rgb;
+  vec3 k = texture(uInput, uv + t * vec2(1.0, 1.0)).rgb;
+  vec3 l = texture(uInput, uv + t * vec2(-1.0, -1.0)).rgb;
+  vec3 m = texture(uInput, uv + t * vec2(1.0, -1.0)).rgb;
+  outColor = vec4(e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125, 1.0);
+}`,
+bup: `
+uniform sampler2D uLower;
+uniform vec2 uTexel;
+uniform float uSpread;
+void main() {
+  vec4 d = vec4(1.0, 1.0, -1.0, 0.0) * uTexel.xyxy;
+  vec3 s = texture(uLower, vUv - d.xy).rgb;
+  s += texture(uLower, vUv - d.wy).rgb * 2.0;
+  s += texture(uLower, vUv - d.zy).rgb;
+  s += texture(uLower, vUv + d.zw).rgb * 2.0;
+  s += texture(uLower, vUv).rgb * 4.0;
+  s += texture(uLower, vUv + d.xw).rgb * 2.0;
+  s += texture(uLower, vUv + d.zy).rgb;
+  s += texture(uLower, vUv + d.wy).rgb * 2.0;
+  s += texture(uLower, vUv + d.xy).rgb;
+  outColor = vec4(texture(uInput, vUv).rgb + s / 16.0 * uSpread, 1.0);
+}`,
+bcomp: `
+uniform sampler2D uBloom;
+uniform sampler2D uSmall;
+uniform float uIntensity;
+uniform vec3 uTint;
+uniform float uLevels;
+void main() {
+  vec3 base = toLinear(texture(uInput, vUv).rgb);
+  vec3 glow = texture(uBloom, vUv).rgb / max(uLevels * 0.55, 1.0);
+  vec3 mean = texture(uSmall, vec2(0.25)).rgb + texture(uSmall, vec2(0.75, 0.25)).rgb;
+  mean += texture(uSmall, vec2(0.25, 0.75)).rgb + texture(uSmall, vec2(0.75)).rgb;
+  float energy = luma(mean * 0.25);
+  glow *= uIntensity * 1.5 / (1.0 + energy * 5.0);
+  vec3 color = 1.0 - (1.0 - base) * exp(-glow * uTint);
+  outColor = vec4(toGamma(color), 1.0);
+}`,
+crt: `
+uniform sampler2D uGlowMap;
+uniform float uCurvature;
+uniform float uLines;
+uniform float uScan;
+uniform float uGlow;
+uniform float uVignette;
+uniform float uFlicker;
+uniform float uRoll;
+uniform float uConvergence;
+uniform float uSeed;
+uniform vec4 uTube;   // x,y: picture half-size (1 = full), z: white-out, w: halo
+uniform float uBright;
+vec2 warp(vec2 uv) {
+  vec2 c = uv * 2.0 - 1.0;
+  vec2 offset = c.yx * c.yx * vec2(0.11, 0.16) * uCurvature;
+  c += c * offset;
+  return c * 0.5 + 0.5;
+}
+void main() {
+  vec2 uv = warp(vUv);
+  vec2 edge = smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), uv) * smoothstep(vec2(0.0), vec2(0.004 + uCurvature * 0.006), 1.0 - uv);
+  float inside = edge.x * edge.y;
+  // power-on / power-off: squash the picture into a line or a dot
+  vec2 c = uv * 2.0 - 1.0;
+  vec2 sz = max(uTube.xy, vec2(0.0005));
+  vec2 px = 2.0 / uResolution;
+  float on = (1.0 - smoothstep(sz.x - px.x, sz.x + px.x, abs(c.x))) * (1.0 - smoothstep(sz.y - px.y, sz.y + px.y, abs(c.y)));
+  vec2 suv = clamp(c / sz, -1.0, 1.0) * 0.5 + 0.5;
+  float shift = uConvergence / uResolution.x;
+  vec3 color;
+  color.r = texture(uInput, suv + vec2(shift, 0.0)).r;
+  color.g = texture(uInput, suv).g;
+  color.b = texture(uInput, suv - vec2(shift, 0.0)).b;
+  vec3 linear = toLinear(color);
+  float y = uv.y * uLines;
+  float s = sin(fract(y) * PI);
+  float bright = luma(linear);
+  float beam = pow(s, mix(2.4, 0.7, clamp(bright * 1.6, 0.0, 1.0)));
+  linear *= mix(1.0, beam * 1.55, uScan);
+  linear += toLinear(texture(uGlowMap, suv).rgb) * uGlow;
+  linear = mix(linear, vec3(1.0), uTube.z) * on;
+  vec2 dd = max(abs(c) - sz, 0.0) * vec2(uResolution.x / uResolution.y, 1.0);
+  linear += vec3(0.78, 0.84, 1.0) * exp(-length(dd) * 28.0) * uTube.w * 0.55 * (1.0 - on * 0.5);
+  if (uRoll > 0.0) {
+    float band = fract(uv.y - uTime * 0.11);
+    linear *= 1.0 + smoothstep(0.0, 0.12, band) * smoothstep(0.26, 0.12, band) * uRoll * 0.16;
+  }
+  linear *= 1.0 + (hash11(uSeed) - 0.5) * uFlicker * 0.12;
+  vec2 v = vUv * 2.0 - 1.0;
+  float vig = smootherstep(1.45, 0.35, length(v * vec2(0.92, 1.0)));
+  linear *= mix(1.0, vig, uVignette);
+  outColor = vec4(toGamma(linear * uBright) * inside, 1.0);
+}`,
+};
+
+let PR = {}, T = {}, srcT = null, FMT = null, time = 0;
+function program(body) {
+  const sh = (type, s) => { const o = gl.createShader(type); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, HEADER + body));
+  gl.bindAttribLocation(p, 0, 'aPosition'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const locs = {};
+  return { p, loc: n => (n in locs ? locs[n] : (locs[n] = gl.getUniformLocation(p, n))) };
+}
+function texture(w, h, nearest, internal, format, type) {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, null);
+  const f = nearest ? gl.NEAREST : gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+function target(w, h) {
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  const tex = texture(w, h, false, FMT.internal, gl.RGBA, FMT.type);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+function freeTarget(t) { if (t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); } }
+function setU(prog, name, v) {
+  const l = prog.loc(name); if (l == null) return;
+  if (typeof v === 'number') gl.uniform1f(l, v);
+  else if (v.length === 2) gl.uniform2f(l, v[0], v[1]);
+  else if (v.length === 3) gl.uniform3f(l, v[0], v[1], v[2]);
+  else if (v.length === 4) gl.uniform4f(l, v[0], v[1], v[2], v[3]);
+}
+function pass(prog, o) {
+  gl.useProgram(prog.p);
+  const tg = o.target;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, tg ? tg.fb : null);
+  const w = tg ? tg.w : gl.drawingBufferWidth, h = tg ? tg.h : gl.drawingBufferHeight;
+  gl.viewport(0, 0, w, h);
+  let unit = 0;
+  const bind = (name, t) => { const l = prog.loc(name); if (l == null) return; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.uniform1i(l, unit); unit++; };
+  if (o.input) bind('uInput', o.input);
+  for (const k in o.textures || {}) bind(k, o.textures[k]);
+  setU(prog, 'uResolution', [w, h]); setU(prog, 'uTime', time);
+  for (const k in o.uniforms || {}) setU(prog, k, o.uniforms[k]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  return tg;
+}
+function glInit() {
+  const ext = gl.getExtension('EXT_color_buffer_float');
+  FMT = ext ? { internal: gl.RGBA16F, type: gl.HALF_FLOAT } : { internal: gl.RGBA8, type: gl.UNSIGNED_BYTE };
+  for (const k in FS) PR[k] = program(FS[k]);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+}
+function glAlloc() {
+  for (const k in T) { const v = T[k]; Array.isArray(v) ? v.forEach(freeTarget) : freeTarget(v); }
+  T = {};
+  if (srcT) gl.deleteTexture(srcT.tex);
+  const W = src.width, H = src.height;
+  srcT = { tex: texture(W, H, false, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE), w: W, h: H };
+  T.bloom = target(W, H);
+  T.h1 = target(W / 2, H / 2); T.h2 = target(W / 2, H / 2); T.h3 = target(W / 2, H / 2);
+  const chain = [target(W / 2, H / 2)];
+  while (chain.length < 7 && Math.min(chain[chain.length - 1].w, chain[chain.length - 1].h) > 12) {
+    const l = chain[chain.length - 1]; chain.push(target(l.w / 2, l.h / 2));
+  }
+  T.chain = chain; T.ups = chain.slice(0, -1).map(l => target(l.w, l.h));
+}
+function renderGL() {
+  const W = src.width, H = src.height;
+  const calm = S.rm !== 'off', roll = calm ? 0 : P.roll, flick = calm ? 0 : P.flicker;
+  let cur = srcT;
+  const th = Math.pow(P.bThreshold, 2.2);
+  const chain = T.chain;
+  pass(PR.bpre, { input: cur, target: chain[0], uniforms: { uTexel: [1 / W, 1 / H], uThreshold: th, uKnee: Math.max(th * 0.5, 0.001) } });
+  for (let i = 1; i < chain.length; i++) pass(PR.bdown, { input: chain[i - 1], target: chain[i], uniforms: { uTexel: [1 / chain[i - 1].w, 1 / chain[i - 1].h] } });
+  let lower = chain[chain.length - 1];
+  for (let i = chain.length - 2; i >= 0; i--) {
+    pass(PR.bup, { input: chain[i], target: T.ups[i], textures: { uLower: lower }, uniforms: { uTexel: [1 / lower.w, 1 / lower.h], uSpread: P.bRadius } });
+    lower = T.ups[i];
+  }
+  pass(PR.bcomp, { input: cur, target: T.bloom, textures: { uBloom: lower, uSmall: chain[chain.length - 1] },
+    uniforms: { uIntensity: P.bIntensity, uTint: [1, 1, 1], uLevels: chain.length } });
+  cur = T.bloom;
+  pass(PR.copy, { input: cur, target: T.h1 });
+  const sig = 3 * dpr;
+  pass(PR.blur, { input: T.h1, target: T.h2, uniforms: { uStep: [1 / T.h1.w, 0], uSigma: sig } });
+  pass(PR.blur, { input: T.h2, target: T.h3, uniforms: { uStep: [0, 1 / T.h1.h], uSigma: sig } });
+  pass(PR.crt, { input: cur, textures: { uGlowMap: T.h3 }, uniforms: {
+    uCurvature: P.curvature, uLines: H / Math.max(1.5, P.lines * dpr), uScan: P.scan, uGlow: P.glow,
+    uVignette: P.vignette, uFlicker: flick, uRoll: roll, uConvergence: P.convergence * dpr, uSeed: Math.floor(time * 30) * 1.7,
+    uTube: S.tube, uBright: S.bright } });
+}
+
+/* ---------------- power-on and power-off curves ---------------- */
+const easeOut = x => 1 - Math.pow(1 - x, 3), easeIn = x => x * x * x;
+const LINE = 0.006;
+function tubeOn(p) {
+  if (CT.power === 'dot') {
+    const dot = LINE * (src.height / Math.max(1, src.width));
+    if (p < 0.2) { const q = p / 0.2; return [dot * (0.3 + 0.7 * easeOut(q)), LINE * (0.3 + 0.7 * easeOut(q)), 1, 1]; }
+    if (p < 0.5) { const q = (p - 0.2) / 0.3; return [dot + (1 - dot) * easeOut(q), LINE, 1, 1]; }
+    const q = (p - 0.5) / 0.5;
+    return [1, LINE + (1 - LINE) * easeOut(q), 1 - easeOut(q), 1 - q];
+  }
+  if (p < 0.45) { const q = p / 0.45; return [Math.max(0.004, easeOut(q)), LINE, 1, 1]; }
+  const q = (p - 0.45) / 0.55;
+  return [1, LINE + (1 - LINE) * easeOut(q), 1 - easeOut(q), 1 - q];
+}
+const OFF_D = 0.95;
+function tubeOff(p) {
+  const dot = LINE * (src.height / Math.max(1, src.width));
+  if (p < 0.38) { const q = p / 0.38; return [[1, 1 - (1 - LINE) * easeIn(q), q, q], 1]; }
+  if (p < 0.68) { const q = (p - 0.38) / 0.3; return [[1 - (1 - dot) * easeOut(q), LINE, 1, 1], 1]; }
+  const q = (p - 0.68) / 0.32, k = 1 - q * 0.6;
+  return [[dot * k, LINE * k, 1, 1], 1 - easeIn(q)];
+}
+
+/* ---------------- flow ---------------- */
+function startBoot(forceShort, why) {
+  S.cmd = null; S.notes = []; S.skippedAt = null; S.hover = null;
+  S.plan = makePlan(forceShort, why);
+  if (S.rm === 'skip') { S.mode = 'dash'; S.plan.reduced = true; }
+  else { S.mode = 'boot'; S.t0 = performance.now(); S.seg = S.plan.segs[0]; S.segP = 0; }
+  renderTimeline(); dirty();
+}
+function skip() {
+  S.skippedAt = (performance.now() - S.t0) / 1000;
+  S.mode = 'dash'; dirty();
+}
+function powerOff() {
+  S.cmd = null; S.notes = []; S.hover = null;
+  if (S.rm === 'skip' || S.mode === 'black' || S.mode === 'off') { S.mode = 'off'; dirty(); return; }
+  S.mode = 'offanim'; S.offAt = performance.now(); dirty();
+}
+function powerOn() { startBoot(false, 'power on'); }
+function dashKey(k) {
+  const d = DASH.find(x => x.k === k);
+  if (d) notify(d.d, `Would open ${d.d}. Not wired in this prototype.`);
+}
+function runCmd(c) {
+  c = c.trim();
+  if (['q', 'q!', 'qa', 'qa!', 'wq', 'x', 'quit'].includes(c)) return powerOff();
+  if (c) notify('Error', `E492: Not an editor command: ${c}`, 'error');
+}
+
+/* ---------------- layout and loop ---------------- */
+let needsDraw = true;
+const dirty = () => { needsDraw = true; };
+function layout() {
+  cssW = scrEl.clientWidth; if (!cssW) return;
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  fontPx = cssW < 640 ? 11 : cssW < 900 ? 12.5 : 14;
+  cssH = Math.round(Math.min(760, Math.max(cssW < 640 ? 440 : 440, cssW * 0.6)));
+  scrEl.style.height = cssH + 'px';
+  src.width = Math.round(cssW * dpr); src.height = Math.round(cssH * dpr);
+  if (glOk) { view.width = src.width; view.height = src.height; }
+  F0 = `400 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  F1 = `700 ${fontPx * dpr}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+  g.font = F0;
+  const m = g.measureText('M').width / dpr, lh = Math.round(fontPx * 1.5);
+  cols = Math.max(24, Math.floor(cssW / m)); rows = Math.max(12, Math.floor(cssH / lh));
+  cw = cssW / cols; chh = cssH / rows;
+  gridInit();
+  if (glOk) glAlloc();
+  needsDraw = true;
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  time = now / 1000;
+  if (!cols) return;
+  if (S.notes.length && S.notes[0].until < now) { S.notes = S.notes.filter(n => n.until >= now); needsDraw = true; }
+  let tube = [1, 1, 0, 0], bright = 1;
+  if (S.mode === 'boot') {
+    const t = (now - S.t0) / 1000;
+    if (t >= S.plan.total) { S.mode = 'dash'; }
+    else {
+      S.seg = S.plan.segs.find(s => t < s.start + s.dur) || S.plan.segs[S.plan.segs.length - 1];
+      S.segP = clamp01((t - S.seg.start) / S.seg.dur);
+      if (S.seg.id === 'power') { if (S.rm === 'calm') bright = easeOut(S.segP); else tube = tubeOn(S.segP); }
+    }
+    needsDraw = true;
+  } else if (S.mode === 'still') {
+    if (S.still === 'power') { if (S.rm === 'calm') bright = 0.5; else tube = tubeOn(CT.power === 'dot' ? 0.12 : 0.42); }
+  } else if (S.mode === 'offanim') {
+    const p = (now - S.offAt) / 1000 / OFF_D;
+    if (p >= 1) { S.mode = 'off'; needsDraw = true; }
+    else if (S.rm === 'calm') bright = 1 - p;
+    else [tube, bright] = tubeOff(p);
+  } else if (S.mode === 'black') bright = 0;
+  if (S.mode === 'off' || S.cmd != null) needsDraw = true; // blinking cursors
+  S.tube = tube; S.bright = bright;
+  let upload = false;
+  if (needsDraw) { build(); paint(); needsDraw = false; upload = true; }
+  if (glOk) {
+    if (upload) {
+      gl.bindTexture(gl.TEXTURE_2D, srcT.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    }
+    renderGL();
+  } else {
+    view.style.transform = `scale(${Math.max(tube[0], 0.003)}, ${Math.max(tube[1], 0.004)})`;
+    view.style.filter = `brightness(${(1 + tube[2] * 4) * bright})`;
+  }
+  updateStatus(now);
+}
+
+/* ---------------- timeline and status under the Screen ---------------- */
+const tlEl = $('#tl'), stEl = $('#status');
+function renderTimeline() {
+  const pl = S.plan;
+  tlEl.innerHTML = pl.segs.map((s, i) => `<div class="s" data-i="${i}" style="--g:${s.dur}"><b>${i + 1}. ${s.name}</b><i>${s.dur.toFixed(2)}s</i></div>`).join('') + '<div class="mark" id="mark"></div>';
+  syncPick();
+}
+let lastStatus = '';
+function updateStatus(now) {
+  const pl = S.plan; if (!pl) return;
+  const head = pl.why === 'power on' ? 'Power on → full boot' : (S.visit === 'return' ? 'Return visit' : 'First visit ever');
+  let txt, t = null;
+  if (pl.reduced && S.mode === 'dash') txt = `${head} · reduce motion is on, so there's no boot. Straight to the Dashboard.`;
+  else if (S.mode === 'boot') { t = (now - S.t0) / 1000; txt = `${head} · ${LEN_NAME[pl.L]} · <em>${t.toFixed(2)}s</em> / ${pl.total.toFixed(2)}s · step ${pl.segs.indexOf(S.seg) + 1}: ${S.seg.name}`; }
+  else if (S.mode === 'dash') txt = S.skippedAt != null ? `${head} · skipped at <em>${S.skippedAt.toFixed(2)}s</em> of ${pl.total.toFixed(2)}s · on the Dashboard` : `${head} · ${LEN_NAME[pl.L]} · finished in ${pl.total.toFixed(2)}s · on the Dashboard`;
+  else if (S.mode === 'still') { const s = pl.segs.find(x => x.id === S.still); txt = s ? `Paused on step ${pl.segs.indexOf(s) + 1}: ${s.name} · edit it below, or Replay boot to watch it all` : `Paused on the name banner, which only plays with Q1 c)`; }
+  else if (S.mode === 'offanim') txt = S.rm === 'calm' ? 'Powering off: calm fade' : 'Powering off: picture → line → dot';
+  else if (S.mode === 'off') txt = 'Off. Press any key, click or tap the Screen to power on.';
+  else txt = 'Loading…';
+  if (txt !== lastStatus) { stEl.innerHTML = txt; lastStatus = txt; }
+  const mark = $('#mark'); if (!mark) return;
+  const segs = tlEl.querySelectorAll('.s');
+  let at = S.mode === 'boot' ? t : (S.mode === 'dash' && !pl.reduced ? (S.skippedAt ?? pl.total) : null);
+  segs.forEach((el, i) => {
+    const s = pl.segs[i];
+    el.classList.toggle('on', (S.mode === 'boot' && S.seg === s) || (S.mode === 'still' && S.still === s.id));
+    el.classList.toggle('done', at != null && at >= s.start + s.dur - 1e-6);
+  });
+  if (at == null) { mark.style.opacity = 0; return; }
+  // place the marker inside the segment it falls in (segments have gaps between them)
+  const s = pl.segs.find(x => at < x.start + x.dur) || pl.segs[pl.segs.length - 1];
+  const el = segs[pl.segs.indexOf(s)], f = clamp01((at - s.start) / s.dur);
+  mark.style.opacity = 1;
+  mark.style.left = (el.offsetLeft + f * el.offsetWidth - 1) + 'px';
+}
+
+/* ---------------- input ---------------- */
+function cellAt(e) {
+  const r = view.getBoundingClientRect();
+  let u = (e.clientX - r.left) / r.width, v = 1 - (e.clientY - r.top) / r.height;
+  if (glOk) {
+    let cx = u * 2 - 1, cy = v * 2 - 1;
+    const ox = cy * cy * 0.11 * P.curvature, oy = cx * cx * 0.16 * P.curvature;
+    cx += cx * ox; cy += cy * oy; u = cx * 0.5 + 0.5; v = cy * 0.5 + 0.5;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+  }
+  return { col: Math.floor(u * cols), row: Math.floor((1 - v) * rows) };
+}
+const hit = c => c && CLK.find(k => k.y === c.row && c.col >= k.x0 && c.col < k.x1);
+function interrupt() {
+  if (S.mode === 'boot') { skip(); return true; }
+  if (S.mode === 'off') { powerOn(); return true; }
+  if (S.mode === 'offanim' || S.mode === 'black' || S.mode === 'still') return true;
+  return false;
+}
+function bindInput() {
+  view.addEventListener('mousemove', e => {
+    if (S.mode !== 'dash') return;
+    const k = hit(cellAt(e)); const key = k ? k.key : null;
+    view.style.cursor = k ? 'pointer' : 'default';
+    if (key !== S.hover) { S.hover = key; dirty(); }
+  });
+  view.addEventListener('mouseleave', () => { if (S.hover) { S.hover = null; dirty(); } });
+  view.addEventListener('click', e => {
+    view.focus({ preventScroll: true });
+    if (interrupt()) return;
+    const k = hit(cellAt(e)); if (k) k.act();
+  });
+  window.addEventListener('keydown', e => {
+    const tgt = e.target;
+    if (tgt !== document.body && tgt !== view && tgt !== document.documentElement) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (['Shift', 'CapsLock', 'Tab'].includes(k)) return;
+    e.preventDefault();
+    if (interrupt()) return;
+    if (S.mode !== 'dash') return;
+    if (S.cmd != null) {
+      if (k === 'Escape') S.cmd = null;
+      else if (k === 'Enter') { const c = S.cmd; S.cmd = null; runCmd(c); }
+      else if (k === 'Backspace') { if (S.cmd) S.cmd = S.cmd.slice(0, -1); else S.cmd = null; }
+      else if (k.length === 1) S.cmd += k;
+      dirty(); return;
+    }
+    if (S.spacePend) { S.spacePend = false; if (k === 'q') return powerOff(); if (k === 'Escape') return; }
+    if (k === ':') { S.cmd = ''; dirty(); return; }
+    if (k === ' ') { S.spacePend = true; notify('Which-key', 'Press q to quit. (The rest of Which-key is in the #7 prototype.)'); return; }
+    if (k === 'q') return powerOff();
+    if (k === 'Escape') { S.notes = []; dirty(); return; }
+    if ('wpecds'.includes(k)) return dashKey(k);
+  });
+}
+
+/* ---------------- page controls ---------------- */
+const NAMES = {
+  steps: { a: 'a) five steps, no name banner', b: 'b) five steps + small FRANCO-OS badge in the self-test', c: 'c) six steps with the name banner' },
+  len: { a: 'a) first visit 5–7s, return ~1s', b: 'b) first visit 3–4s, return ~1s', c: 'c) always ~1s', d: 'd) always 5–7s, return visits too' },
+  rm: { off: 'not looked at', skip: 'no boot, straight to the Dashboard', calm: 'calm boot (same steps, fades instead of the line, no flicker or rolling band)' },
+};
+function syncPick() {
+  const v = S.visit;
+  S.visit = 'first'; const fl = makePlan(false);
+  S.visit = 'return'; const ret = makePlan(false);
+  S.visit = v;
+  const lines = biosOn().map(b => `  - ${b.l} … ${b.r}${b.c === 'yellow' ? ' (warning)' : b.c === 'red' ? ' (error)' : ''}`).join('\n');
+  $('#pick').textContent = `#8 Boot Sequence prototype
+Q1 steps: ${NAMES.steps[S.steps]}
+Q2 length: ${NAMES.len[S.len]} (first visit ${fl.total.toFixed(1)}s, return visit ${ret.total.toFixed(1)}s)
+Reduce motion: ${NAMES.rm[S.rm]}
+Quit: power-off, then "press any key to power on" plays the full boot
+
+Content
+1 power-on: ${CT.power === 'dot' ? 'dot → line → picture' : 'line → picture'}
+2 self-test: "${CT.h1}" / "${CT.h2}"
+${lines || '  (no lines)'}
+3 name banner: ${CT.font === 'big' ? 'big letters' : 'compact letters'}, ${CT.bannerColor}, under it: "${CT.sub}"
+4 login: "${CT.tty}" · "${CT.host} login: ${CT.user}"${CT.pass ? ' · Password:' : ''}${CT.lastOn ? ` · "${CT.last}"` : ''}
+5 nvim: "${CT.user}@${CT.host}:~$ ${CT.cmd}"`;
+}
+const SEGS = [['stepsSeg', 'steps'], ['lenSeg', 'len'], ['visitSeg', 'visit'], ['rmSeg', 'rm']];
+function syncControls() {
+  for (const [id, key] of SEGS)
+    document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S[key]));
+  syncPick();
+}
+for (const [id, key] of SEGS)
+  $('#' + id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S[key] = b.dataset.v; syncControls(); renderPanel(); startBoot(false); });
+
+/* ---------------- Screen content panel ---------------- */
+const TABS = [['power', 'Power-on'], ['bios', 'Self-test'], ['banner', 'Name banner'], ['login', 'login:'], ['nvim', 'nvim'], ['dash', 'Dashboard']];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fTxt = (k, label, extra = '') => `<label class="field" for="f-${k}">${label}<input type="text" id="f-${k}" data-k="${k}" value="${esc(CT[k])}" spellcheck="false" ${extra}></label>`;
+const fSel = (k, label, opts) => `<label class="field" for="f-${k}">${label}<select id="f-${k}" data-k="${k}">${opts.map(([v, t]) => `<option value="${v}"${CT[k] === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`;
+const fChk = (k, label) => `<label class="field chk" for="f-${k}"><input type="checkbox" id="f-${k}" data-k="${k}"${CT[k] ? ' checked' : ''}> ${label}</label>`;
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([id, name], i) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${S.tab === id}">${i + 1}. ${name}</button>`).join('');
+}
+function renderPanel() {
+  const pl = makePlan(false), seg = pl.segs.find(s => s.id === S.tab);
+  const dur = seg ? `It lasts ${seg.dur.toFixed(2)}s in the ${LEN_NAME[pl.L]} boot.` : '';
+  let h = '';
+  if (S.tab === 'power') h = `<p class="note">No text here. The tube warms up and the picture opens out of a bright line. ${dur}</p>
+    <div class="fields">${fSel('power', 'How it opens', [['line', 'A line, then the picture'], ['dot', 'A dot, then a line, then the picture']])}</div>`;
+  else if (S.tab === 'bios') {
+    const n = biosOn().length;
+    h = `<p class="note">A joke BIOS self-test. Ticked lines play in order. In the full boot each line takes about 0.29s, so ${n} line${n === 1 ? '' : 's'} take ${seg ? seg.dur.toFixed(2) : '–'}s. The jokes are placeholders: rewrite them, untick them, or add your own.</p>
+    <div class="fields">${fTxt('h1', 'Title line')}${fTxt('h2', 'Second line (empty = none)')}</div>
+    <div class="rows">
+      <div class="row rowhead"><span></span><span>Check</span><span>Result</span><span>Color</span><span></span></div>
+      ${CT.bios.map((b, i) => `<div class="row${b.on ? '' : ' off'}">
+        <input type="checkbox" id="b-${i}-on" data-b="${i}:on" aria-label="Show line ${i + 1}"${b.on ? ' checked' : ''}>
+        <input type="text" id="b-${i}-l" data-b="${i}:l" value="${esc(b.l)}" aria-label="Check, line ${i + 1}" spellcheck="false">
+        <input type="text" class="res" id="b-${i}-r" data-b="${i}:r" value="${esc(b.r)}" aria-label="Result, line ${i + 1}" spellcheck="false">
+        <select id="b-${i}-c" data-b="${i}:c" aria-label="Result color, line ${i + 1}">${[['green', 'OK'], ['yellow', 'Warning'], ['red', 'Error']].map(([v, t]) => `<option value="${v}"${b.c === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
+        <div class="mv"><button type="button" data-mv="${i}:-1" aria-label="Move line ${i + 1} up">↑</button><button type="button" data-mv="${i}:1" aria-label="Move line ${i + 1} down">↓</button><button type="button" data-del="${i}" aria-label="Delete line ${i + 1}">✕</button></div>
+      </div>`).join('')}
+    </div>
+    <div><button type="button" class="btn ghost" data-add="1">Add a line</button></div>`;
+  }
+  else if (S.tab === 'banner') h = `<p class="note">${S.steps === 'c' ? '' : '<b>Only plays with Q1 c).</b> '}A big ASCII banner of your name, a beat before the Dashboard. ${dur}</p>
+    <div class="fields">${fSel('font', 'Letters', [['big', 'Big block letters (same as the Dashboard)'], ['compact', 'Compact, half the height']])}
+    ${fSel('bannerColor', 'Color', [['text', 'White'], ['blue', 'Blue (the Dashboard logo color)'], ['mauve', 'Mauve'], ['green', 'Green'], ['peach', 'Peach']])}
+    ${fTxt('sub', 'Line under it (empty = none)')}</div>`;
+  else if (S.tab === 'login') h = `<p class="note">The machine logs itself in, typing the user name. ${dur}</p>
+    <div class="fields">${fTxt('tty', 'Top line (empty = none)')}${fTxt('host', 'Machine name')}${fTxt('user', 'User name it types')}${fTxt('last', 'Last-login line')}${fChk('lastOn', 'Show the last-login line')}${fChk('pass', 'Show a Password: line')}</div>`;
+  else if (S.tab === 'nvim') h = `<p class="note">The shell types the command that opens the editor. ${dur}</p>
+    <div class="fields">${fTxt('cmd', 'Command it types', 'list="cmds"')}</div>
+    <datalist id="cmds"><option value="nvim"></option><option value="nvim ~/franco"></option><option value="nvim ."></option><option value="vim"></option></datalist>`;
+  else h = `<p class="note">Already decided in #6: the FRANCO logo, the six essential entries and the real load time. It's here so you can see where the boot lands. ${dur}</p>`;
+  $('#panel').innerHTML = h;
+}
+function showStill(id) {
+  S.mode = 'still'; S.still = id; S.cmd = null; S.notes = []; S.hover = null;
+  S.plan = makePlan(false); renderTimeline(); dirty();
+}
+function onContent() {
+  if (S.mode !== 'still' || S.still !== S.tab) showStill(S.tab);
+  else { S.plan = makePlan(false); renderTimeline(); dirty(); }
+  const seg = S.plan.segs.find(s => s.id === S.tab);
+  const note = $('#panel .note');
+  if (S.tab === 'bios' && note && seg) { const n = biosOn().length; note.textContent = `A joke BIOS self-test. Ticked lines play in order. In the full boot each line takes about 0.29s, so ${n} line${n === 1 ? '' : 's'} take ${seg.dur.toFixed(2)}s. The jokes are placeholders: rewrite them, untick them, or add your own.`; }
+}
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  S.tab = b.dataset.tab; renderTabs(); renderPanel(); showStill(S.tab);
+});
+function onField(e) {
+  const t = e.target;
+  if (t.dataset.k) CT[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
+  else if (t.dataset.b) {
+    const [i, f] = t.dataset.b.split(':');
+    CT.bios[+i][f] = t.type === 'checkbox' ? t.checked : t.value;
+    if (f === 'on') t.closest('.row').classList.toggle('off', !t.checked);
+  } else return;
+  onContent();
+}
+$('#panel').addEventListener('input', onField);
+$('#panel').addEventListener('change', onField);
+$('#panel').addEventListener('click', e => {
+  const mv = e.target.closest('[data-mv]'), del = e.target.closest('[data-del]'), add = e.target.closest('[data-add]');
+  if (mv) {
+    const [i, d] = mv.dataset.mv.split(':').map(Number), j = i + d;
+    if (j < 0 || j >= CT.bios.length) return;
+    [CT.bios[i], CT.bios[j]] = [CT.bios[j], CT.bios[i]];
+  } else if (del) CT.bios.splice(+del.dataset.del, 1);
+  else if (add) CT.bios.push({ on: true, l: 'New check', r: 'OK', c: 'green' });
+  else return;
+  renderPanel(); onContent();
+  if (add) { const inp = $(`#b-${CT.bios.length - 1}-l`); if (inp) { inp.focus(); inp.select(); } }
+});
+$('#replay').addEventListener('click', () => startBoot(false));
+$('#poweroff').addEventListener('click', () => { if (S.mode === 'off') return; if (S.mode === 'boot') S.mode = 'dash'; powerOff(); });
+$('#copy').addEventListener('click', () => {
+  const text = $('#pick').textContent, btn = $('#copy');
+  const ok = () => { btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = 'Copy pick'), 1500); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('#pick')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch (e) { fallback(); }
+});
+
+/* ---------------- start ---------------- */
+let glOk = !!gl;
+function useNoGL() {
+  glOk = false;
+  src.tabIndex = 0; src.setAttribute('aria-label', view.getAttribute('aria-label'));
+  src.style.transformOrigin = '50% 50%';
+  view.replaceWith(src); view = src;
+}
+async function start() {
+  try { await Promise.race([Promise.all([document.fonts.load('400 14px "JetBrains Mono"'), document.fonts.load('700 14px "JetBrains Mono"')]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+  if (glOk) {
+    try { glInit(); }
+    catch (err) { console.error(err); $('#nogl').textContent = 'The shaders failed to compile in this browser, so the CRT effect is off.'; $('#nogl').hidden = false; useNoGL(); }
+  } else { $('#nogl').hidden = false; useNoGL(); }
+  MS = performance.now().toFixed(2);
+  syncControls(); renderTabs(); renderPanel(); bindInput(); layout();
+  new ResizeObserver(() => { if (scrEl.clientWidth !== cssW) layout(); }).observe(scrEl);
+  requestAnimationFrame(frame);
+  setTimeout(() => startBoot(false), 350);
+}
+start();
+})();
+</script>
